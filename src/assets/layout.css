@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* 레이아웃 전역 CSS 변수 */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border-color: #e5e7eb;
+  --blue-600: #2563eb;
+  --gray-100: #f3f4f6;
+  --gray-500: #6b7280;
+  --gray-900: #111827;
+}
+
+/* 전역 유틸리티 클래스 */
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-8 {
+  gap: 32px;
+}
+
+
+
+
+
+
+
+
+
+
+
+

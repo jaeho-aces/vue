@@ -1,0 +1,1389 @@
+<template>
+  <div class="reusable-table-wrapper">
+    <!-- 데이터 입력/수정 모달 -->
+    <DataFormModal
+      v-if="formFields && formFields.length > 0"
+      :is-open="isModalOpen"
+      :title="modalTitle || '데이터 입력/수정'"
+      :fields="formFields"
+      :initial-data="editingData || undefined"
+      @close="handleModalClose"
+      @submit="handleModalSubmit"
+    />
+    
+    <!-- 상단 툴바 (컬럼 선택 + 버튼) -->
+    <div class="top-toolbar">
+      <div class="toolbar-left">
+        <div class="column-selector-container">
+          <div class="column-selector-wrapper">
+            <button 
+              @click="isColumnDropdownOpen = !isColumnDropdownOpen"
+              class="column-selector-button"
+            >
+              컬럼 선택
+              <span class="dropdown-arrow" :class="{ 'open': isColumnDropdownOpen }">▼</span>
+            </button>
+            <div v-if="isColumnDropdownOpen" class="column-dropdown" @click.stop>
+              <div class="dropdown-header">
+                <span>표시할 컬럼 선택</span>
+                <button @click="isColumnDropdownOpen = false" class="close-button">×</button>
+              </div>
+              <div class="dropdown-content">
+                <label 
+                  v-for="column in columns" 
+                  :key="column.id"
+                  class="column-checkbox-label"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="visibleColumns.has(column.id)"
+                    @change="toggleColumn(column.id)"
+                    class="column-checkbox"
+                  />
+                  <span>{{ column.header }}</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 데이터 개수 표시 -->
+        <div class="data-count-info">
+          <span class="data-count-text">
+            전체: <strong>{{ totalDataCount }}</strong>개
+            <span v-if="filteredDataCount !== totalDataCount" class="filtered-count">
+              (표시: <strong>{{ filteredDataCount }}</strong>개)
+            </span>
+          </span>
+        </div>
+      </div>
+      <div class="toolbar-right">
+        <div class="button-group">
+          <!-- 커스텀 버튼 슬롯 (기본 버튼 왼쪽) -->
+          <slot name="toolbar-actions-left"></slot>
+          <Button @click="handleNew" variant="primary">
+            신규
+          </Button>
+          <Button 
+            v-if="formFields && formFields.length > 0 && !props.hideEditButton"
+            @click="handleEdit" 
+            variant="secondary"
+            :disabled="selectedRowIds.size !== 1"
+          >
+            수정
+          </Button>
+          <Button @click="handleDelete" variant="danger" :disabled="selectedRowIds.size === 0">
+            삭제
+          </Button>
+        </div>
+      </div>
+    </div>
+    <div class="table-container" ref="tableContainerRef">
+      <div class="table-wrapper">
+      <!-- 헤더 -->
+      <div class="table-header sticky top-0 z-10 bg-slate-50">
+        <div
+          class="grid-header"
+          :style="{
+            gridTemplateColumns: gridTemplateColumns,
+            gridTemplateRows: '40px',
+            width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
+            minWidth: isBrowserWidthAboveMin ? '0' : `${minTableWidth}px`
+          }"
+        >
+          <!-- 체크박스 컬럼 -->
+          <div
+            class="header-cell bg-slate-100 sticky-checkbox-column"
+          >
+            <div class="header-content">
+              <input
+                type="checkbox"
+                :checked="isAllSelected"
+                @change="handleSelectAll"
+                class="checkbox-input"
+              />
+            </div>
+          </div>
+          <!-- ID 컬럼 -->
+          <div
+            class="header-cell bg-slate-100 border-r sticky-id-column"
+            :class="{ 'filtered': columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
+            :style="{ 
+              left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
+              borderLeft: '1px solid #e2e8f0' 
+            }"
+          >
+            <div class="header-content">
+              <span>ID</span>
+              <button
+                @click.stop="toggleFilterDropdown(idField, $event)"
+                class="filter-button"
+                :class="{ active: openFilterDropdown === idField || columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
+              >
+                <span class="filter-icon">🔍</span>
+              </button>
+            </div>
+            <div
+              class="resize-handle"
+              @mousedown.stop="handleResizeStart(idField, $event.clientX, getColumnWidth(idField, idColumnWidth))"
+            ></div>
+            <!-- 필터 드롭다운 -->
+            <div v-if="openFilterDropdown === idField" class="filter-dropdown" @click.stop>
+              <div class="filter-section">
+                <div class="filter-section-title">정렬</div>
+                <div class="filter-options">
+                  <button
+                    @click="handleSort(idField, 'asc')"
+                    :class="['filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'asc' }]"
+                  >
+                    오름차순
+                  </button>
+                  <button
+                    @click="handleSort(idField, 'desc')"
+                    :class="['filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'desc' }]"
+                  >
+                    내림차순
+                  </button>
+                </div>
+              </div>
+              <div class="filter-section">
+                <div class="filter-section-title">검색</div>
+                <input
+                  :value="columnFilters[idField]?.search || ''"
+                  @input="(e) => { if (!columnFilters[idField]) columnFilters[idField] = { search: '' }; columnFilters[idField].search = (e.target as HTMLInputElement).value }"
+                  type="text"
+                  placeholder="검색..."
+                  class="filter-search-input"
+                />
+              </div>
+              <div class="filter-section">
+                <button
+                  @click="clearFilter(idField)"
+                  class="filter-clear-button"
+                  :disabled="!columnFilters[idField]?.search && !table.getColumn(idField)?.getIsSorted()"
+                >
+                  필터 해제
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- 모든 컬럼 헤더 -->
+          <template v-for="column in visibleColumnsList" :key="column.id">
+            <div 
+              class="header-cell"
+              :class="{ 'filtered': columnFilters[column.id]?.search || table.getColumn(column.id)?.getIsSorted() }"
+            >
+              <div class="header-content">
+                <span>{{ column.header }}</span>
+                <button
+                  @click.stop="toggleFilterDropdown(column.id, $event)"
+                  class="filter-button"
+                  :class="{ active: openFilterDropdown === column.id || columnFilters[column.id]?.search || table.getColumn(column.id)?.getIsSorted() }"
+                >
+                  <span class="filter-icon">🔍</span>
+                </button>
+              </div>
+              <div
+                class="resize-handle"
+                @mousedown.stop="handleResizeStart(column.id, $event.clientX, getColumnWidth(column.id, column.size))"
+              ></div>
+              <!-- 필터 드롭다운 -->
+              <div v-if="openFilterDropdown === column.id" class="filter-dropdown" @click.stop>
+                <div class="filter-section">
+                  <div class="filter-section-title">정렬</div>
+                  <div class="filter-options">
+                    <button
+                      @click="handleSort(column.id, 'asc')"
+                      :class="['filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'asc' }]"
+                    >
+                      오름차순
+                    </button>
+                    <button
+                      @click="handleSort(column.id, 'desc')"
+                      :class="['filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'desc' }]"
+                    >
+                      내림차순
+                    </button>
+                  </div>
+                </div>
+                <div class="filter-section">
+                  <div class="filter-section-title">검색</div>
+                  <input
+                    :value="columnFilters[column.id]?.search || ''"
+                    @input="(e) => { if (!columnFilters[column.id]) columnFilters[column.id] = { search: '' }; columnFilters[column.id].search = (e.target as HTMLInputElement).value }"
+                    type="text"
+                    placeholder="검색..."
+                    class="filter-search-input"
+                  />
+                </div>
+                <div class="filter-section">
+                  <button
+                    @click="clearFilter(column.id)"
+                    class="filter-clear-button"
+                    :disabled="!columnFilters[column.id]?.search && !table.getColumn(column.id)?.getIsSorted()"
+                  >
+                    필터 해제
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+      
+      <!-- 본문 (가상 스크롤) -->
+      <div
+        class="table-body"
+        :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }"
+      >
+        <template v-for="virtualRow in virtualizer.getVirtualItems()" :key="virtualRow.key">
+          <!-- 각 데이터 항목을 개별적으로 배치 (1행) -->
+          <div
+            class="data-item-wrapper"
+            :class="{ 'data-item-even': virtualRow.index % 2 === 0, 'data-item-odd': virtualRow.index % 2 === 1 }"
+            :style="{
+              position: 'absolute',
+              top: `${virtualRow.start}px`,
+              left: 0,
+              width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
+              height: '40px'
+            }"
+          >
+            <div
+              class="grid-row"
+              :style="{
+                gridTemplateColumns: gridTemplateColumns,
+                gridTemplateRows: '40px',
+                width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
+                minWidth: isBrowserWidthAboveMin ? '0' : `${minTableWidth}px`
+              }"
+            >
+              <!-- 체크박스 컬럼 -->
+              <div
+                class="data-cell data-cell-checkbox sticky-checkbox-column"
+                :style="{ left: '0px' }"
+              >
+                <input
+                  type="checkbox"
+                  :checked="isRowSelected(getRowId(sortedRows[virtualRow.index]?.original))"
+                  @change="handleRowSelect(getRowId(sortedRows[virtualRow.index]?.original), $event)"
+                  class="checkbox-input"
+                />
+              </div>
+              <!-- ID 컬럼 -->
+              <div
+                class="data-cell data-cell-id border-r border-slate-300 font-medium sticky-id-column"
+                :style="{ 
+                  left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
+                  borderLeft: '1px solid #e2e8f0' 
+                }"
+              >
+                {{ getRowId(sortedRows[virtualRow.index]?.original) }}
+              </div>
+              <!-- 모든 컬럼 데이터 -->
+              <template v-for="column in visibleColumnsList" :key="column.id">
+                <div class="data-cell hover:bg-slate-50 transition-colors">
+                  <component
+                    v-if="column.cellComponent"
+                    :is="column.cellComponent"
+                    :value="sortedRows[virtualRow.index]?.getValue(column.id)"
+                    :row="sortedRows[virtualRow.index]"
+                  />
+                  <span v-else class="text-sm text-slate-700">
+                    {{ sortedRows[virtualRow.index]?.getValue(column.id) }}
+                  </span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useVueTable, getCoreRowModel, getSortedRowModel } from '@tanstack/vue-table'
+import { useVirtualizer } from '@tanstack/vue-virtual'
+import type { ColumnDef } from '@tanstack/vue-table'
+import { type Component } from 'vue'
+import DataFormModal, { type FormField } from './DataFormModal.vue'
+import Button from './Button.vue'
+
+// 타입 정의
+export interface TableColumn {
+  id: string
+  header: string
+  size: number // 기본 너비
+  cellComponent?: Component // 셀 컴포넌트 (선택사항)
+  enableSorting?: boolean // 정렬 가능 여부
+}
+
+interface Props {
+  modelValue: any[] // v-model로 데이터 관리
+  columns: TableColumn[]
+  defaultVisibleColumns?: string[] | Set<string>
+  formFields?: FormField[]
+  modalTitle?: string
+  checkboxColumnWidth?: number
+  idColumnWidth?: number
+  idField?: string
+  hideEditButton?: boolean // 수정 버튼 숨김 옵션
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  checkboxColumnWidth: 50,
+  idColumnWidth: 150,
+  idField: 'id',
+  defaultVisibleColumns: () => [],
+  hideEditButton: false
+})
+
+const emit = defineEmits<{
+  'update:modelValue': [data: any[]]
+  new: []
+  edit: [data: any]
+  delete: [ids: string[]]
+  update: [data: any, isNew: boolean]
+}>()
+
+// 기본 표시 컬럼 설정
+const defaultVisibleSet = computed(() => {
+  if (Array.isArray(props.defaultVisibleColumns)) {
+    return new Set(props.defaultVisibleColumns)
+  }
+  if (props.defaultVisibleColumns instanceof Set) {
+    return new Set(props.defaultVisibleColumns)
+  }
+  // 기본값: 모든 컬럼 표시
+  return new Set(props.columns.map(col => col.id))
+})
+
+// 표시할 컬럼 관리
+const visibleColumns = ref<Set<string>>(new Set(defaultVisibleSet.value))
+
+// 드롭다운 열림/닫힘 상태
+const isColumnDropdownOpen = ref(false)
+
+// 필터 드롭다운 열림/닫힘 상태 (컬럼별)
+const openFilterDropdown = ref<string | null>(null)
+
+// 컬럼별 필터 상태
+const columnFilters = ref<Record<string, { search: string }>>({})
+
+// 정렬 상태 관리
+const sorting = ref<Array<{ id: string; desc: boolean }>>([])
+
+// 컬럼 너비 관리 (사용자가 조절한 너비 저장)
+const columnWidthsState = ref<Record<string, number>>({})
+
+// 컬럼 너비 가져오기 (사용자 조절값 또는 기본값)
+const getColumnWidth = (columnId: string, defaultWidth: number) => {
+  return columnWidthsState.value[columnId] ?? defaultWidth
+}
+
+// 리사이즈 상태
+const resizingColumn = ref<string | null>(null)
+const resizeStartX = ref(0)
+const resizeStartWidth = ref(0)
+
+// 리사이즈 시작
+const handleResizeStart = (columnId: string, startX: number, currentWidth: number) => {
+  resizingColumn.value = columnId
+  resizeStartX.value = startX
+  resizeStartWidth.value = currentWidth
+  document.addEventListener('mousemove', handleResizeMove)
+  document.addEventListener('mouseup', handleResizeEnd)
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+}
+
+// 리사이즈 중
+const handleResizeMove = (e: MouseEvent) => {
+  if (!resizingColumn.value) return
+  
+  const diff = e.clientX - resizeStartX.value
+  const newWidth = Math.max(30, resizeStartWidth.value + diff) // 최소 30px
+  columnWidthsState.value[resizingColumn.value] = newWidth
+}
+
+// 리사이즈 종료
+const handleResizeEnd = () => {
+  resizingColumn.value = null
+  document.removeEventListener('mousemove', handleResizeMove)
+  document.removeEventListener('mouseup', handleResizeEnd)
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+}
+
+// 모달 상태
+const isModalOpen = ref(false)
+const editingData = ref<any | null>(null)
+
+// 버튼 핸들러
+const handleNew = () => {
+  editingData.value = null
+  if (props.formFields && props.formFields.length > 0) {
+    isModalOpen.value = true
+  } else {
+    emit('new')
+  }
+}
+
+const handleEdit = () => {
+  if (selectedRowIds.value.size === 1) {
+    const selectedId = Array.from(selectedRowIds.value)[0]
+    const selectedItem = filteredData.value.find((item: any) => getRowId(item) === selectedId)
+    if (selectedItem) {
+      editingData.value = { ...selectedItem }
+      if (props.formFields && props.formFields.length > 0) {
+        isModalOpen.value = true
+      } else {
+        emit('edit', editingData.value)
+      }
+    }
+  }
+}
+
+const handleDelete = () => {
+  if (selectedRowIds.value.size > 0) {
+    const ids = Array.from(selectedRowIds.value)
+    // 내부 데이터에서 삭제
+    internalData.value = internalData.value.filter((item: any) => !ids.includes(getRowId(item)))
+    // 부모에게 업데이트 알림
+    emit('update:modelValue', [...internalData.value])
+    // 이벤트도 emit (필요한 경우)
+    emit('delete', ids)
+    selectedRowIds.value.clear()
+  }
+}
+
+// 모달 핸들러
+const handleModalClose = () => {
+  isModalOpen.value = false
+  editingData.value = null
+}
+
+const handleModalSubmit = (data: Record<string, any>) => {
+  const isNew = !editingData.value
+  const idField = props.idField
+  
+  if (isNew) {
+    // 신규 모드: 데이터 추가
+    const newItem = { ...data }
+    internalData.value.push(newItem)
+  } else {
+    // 수정 모드: 데이터 업데이트
+    const index = internalData.value.findIndex((item: any) => getRowId(item) === data[idField])
+    if (index !== -1) {
+      internalData.value[index] = { ...internalData.value[index], ...data }
+    }
+  }
+  
+  // 부모에게 업데이트 알림
+  emit('update:modelValue', [...internalData.value])
+  // 이벤트도 emit (필요한 경우)
+  emit('update', data, isNew)
+  
+  handleModalClose()
+  selectedRowIds.value.clear()
+}
+
+// 행 ID 가져오기
+const getRowId = (row: any): string => {
+  return row?.[props.idField] || ''
+}
+
+// 선택된 행 ID 관리
+const selectedRowIds = ref<Set<string>>(new Set())
+
+// 전체 선택 여부
+const isAllSelected = computed(() => {
+  return sortedRows.value.length > 0 && sortedRows.value.every(row => selectedRowIds.value.has(getRowId(row.original)))
+})
+
+// 행 선택 여부 확인
+const isRowSelected = (id: string) => {
+  return selectedRowIds.value.has(id)
+}
+
+// 행 선택/해제
+const handleRowSelect = (id: string, event: Event) => {
+  const checked = (event.target as HTMLInputElement).checked
+  if (checked) {
+    selectedRowIds.value.add(id)
+  } else {
+    selectedRowIds.value.delete(id)
+  }
+}
+
+// 전체 선택/해제
+const handleSelectAll = (event: Event) => {
+  const checked = (event.target as HTMLInputElement).checked
+  if (checked) {
+    sortedRows.value.forEach(row => {
+      selectedRowIds.value.add(getRowId(row.original))
+    })
+  } else {
+    sortedRows.value.forEach(row => {
+      selectedRowIds.value.delete(getRowId(row.original))
+    })
+  }
+}
+
+// 필터 드롭다운 토글
+const isFilterButtonClicking = ref(false)
+
+const toggleFilterDropdown = (columnId: string, event?: Event) => {
+  isFilterButtonClicking.value = true
+  
+  if (event) {
+    event.stopPropagation()
+    event.preventDefault()
+  }
+  
+  if (openFilterDropdown.value === columnId) {
+    openFilterDropdown.value = null
+  } else {
+    openFilterDropdown.value = columnId
+    if (!columnFilters.value[columnId]) {
+      columnFilters.value[columnId] = { search: '' }
+    }
+  }
+  
+  setTimeout(() => {
+    isFilterButtonClicking.value = false
+  }, 100)
+}
+
+// 정렬 처리
+const handleSort = (columnId: string, direction: 'asc' | 'desc' | false) => {
+  if (direction === false) {
+    sorting.value = []
+  } else {
+    sorting.value = [{ id: columnId, desc: direction === 'desc' }]
+  }
+}
+
+// 필터 해제
+const clearFilter = (columnId: string) => {
+  sorting.value = sorting.value.filter(s => s.id !== columnId)
+  if (columnFilters.value[columnId]) {
+    columnFilters.value[columnId].search = ''
+  }
+}
+
+// 컬럼 표시/숨김 토글
+const toggleColumn = (columnId: string) => {
+  const newSet = new Set(visibleColumns.value)
+  if (newSet.has(columnId)) {
+    newSet.delete(columnId)
+  } else {
+    newSet.add(columnId)
+  }
+  visibleColumns.value = newSet
+}
+
+// 헤더에 표시할 모든 컬럼
+const visibleColumnsList = computed(() => {
+  return props.columns.filter(col => visibleColumns.value.has(col.id))
+})
+
+// 내부 데이터 관리 (v-model과 동기화)
+const internalData = ref([...props.modelValue])
+
+// props.modelValue가 변경되면 내부 데이터도 업데이트
+watch(() => props.modelValue, (newData) => {
+  internalData.value = [...newData]
+}, { deep: true })
+
+// 필터링된 데이터
+const filteredData = computed(() => {
+  let filtered = [...internalData.value]
+  
+  // 각 컬럼별 검색 필터 적용
+  Object.keys(columnFilters.value).forEach(columnId => {
+    const filter = columnFilters.value[columnId]
+    if (filter && filter.search && filter.search.trim()) {
+      const searchTerm = filter.search.toLowerCase().trim()
+      filtered = filtered.filter(row => {
+        const value = row[columnId]
+        if (value === null || value === undefined) return false
+        return String(value).toLowerCase().includes(searchTerm)
+      })
+    }
+  })
+  
+  return filtered
+})
+
+// 데이터 개수 계산
+const totalDataCount = computed(() => {
+  return internalData.value.length
+})
+
+const filteredDataCount = computed(() => {
+  return filteredData.value.length
+})
+
+// TanStack Table 컬럼 정의 생성
+const tableColumns = computed<ColumnDef<any>[]>(() => {
+  const cols: ColumnDef<any>[] = [
+    {
+      accessorKey: props.idField,
+      header: 'ID',
+      size: props.idColumnWidth,
+      enableSorting: true
+    }
+  ]
+  
+  visibleColumnsList.value.forEach(col => {
+    cols.push({
+      accessorKey: col.id,
+      header: col.header,
+      size: col.size,
+      enableSorting: col.enableSorting !== false
+    })
+  })
+  
+  return cols
+})
+
+// TanStack Table 인스턴스 생성
+const table = useVueTable({
+  get data() {
+    return filteredData.value
+  },
+  get columns() {
+    return tableColumns.value
+  },
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  state: {
+    get sorting() {
+      return sorting.value
+    }
+  },
+  onSortingChange: (updater) => {
+    if (typeof updater === 'function') {
+      sorting.value = updater(sorting.value)
+    } else {
+      sorting.value = updater
+    }
+  }
+})
+
+// 브라우저 전체 너비 감지
+const browserWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1920)
+
+// 최소 브라우저 너비 (1920px)
+const MIN_BROWSER_WIDTH = 1920
+
+// 브라우저 너비가 최소값보다 큰지 확인
+const isBrowserWidthAboveMin = computed(() => {
+  const width = browserWidth.value || MIN_BROWSER_WIDTH
+  return width >= MIN_BROWSER_WIDTH
+})
+
+// 컨테이너 너비 감지
+const containerWidth = ref(0)
+
+// 테이블 최소 너비
+const minTableWidth = computed(() => {
+  const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
+  const idW = getColumnWidth(props.idField, props.idColumnWidth)
+  const visibleWidths = visibleColumnsList.value.map(col => 
+    getColumnWidth(col.id, col.size)
+  )
+  const total = checkboxW + idW + visibleWidths.reduce((sum, width) => sum + width, 0)
+  return Math.max(total, 1920)
+})
+
+// Grid 컬럼 템플릿 계산
+const gridTemplateColumns = computed(() => {
+  const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
+  const idBaseW = getColumnWidth(props.idField, props.idColumnWidth)
+  const visibleColumnBaseWidths = visibleColumnsList.value.map(col => 
+    getColumnWidth(col.id, col.size)
+  )
+  
+  const browserW = browserWidth.value || MIN_BROWSER_WIDTH
+  const totalBaseWidth = idBaseW + visibleColumnBaseWidths.reduce((sum, w) => sum + w, 0)
+  const currentTotal = checkboxW + totalBaseWidth
+  
+  if (browserW < MIN_BROWSER_WIDTH) {
+    if (currentTotal < 1920) {
+      const ratio = 1920 / currentTotal
+      const expandedIdW = idBaseW * ratio
+      const expandedColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
+      return `${checkboxW}px ${expandedIdW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
+    }
+    return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+  }
+  
+  const tableContainerW = containerWidth.value || currentTotal
+  const availableWidth = Math.max(0, tableContainerW - checkboxW)
+  
+  if (availableWidth > totalBaseWidth) {
+    const ratio = availableWidth / totalBaseWidth
+    const idW = idBaseW * ratio
+    const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
+    return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+  } else {
+    return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+  }
+})
+
+// 가상 스크롤 설정
+const tableContainerRef = ref<HTMLElement | null>(null)
+
+// 정렬된 행 데이터
+const sortedRows = computed(() => table.getRowModel().rows)
+
+const virtualizer = useVirtualizer({
+  get count() {
+    return sortedRows.value.length
+  },
+  getScrollElement: () => tableContainerRef.value,
+  estimateSize: () => 40,
+  overscan: 5,
+  getItemKey: (index) => getRowId(sortedRows.value[index]?.original) || `item-${index}`
+})
+
+// 브라우저 너비 업데이트
+const updateBrowserWidth = () => {
+  browserWidth.value = window.innerWidth
+}
+
+// 컨테이너 너비 감지
+const updateContainerWidth = () => {
+  if (tableContainerRef.value) {
+    containerWidth.value = tableContainerRef.value.clientWidth
+  }
+}
+
+let resizeObserver: ResizeObserver | null = null
+let clickOutsideHandler: ((event: MouseEvent) => void) | null = null
+
+onMounted(() => {
+  clickOutsideHandler = (event: MouseEvent) => {
+    const target = event.target as HTMLElement
+    
+    if (isFilterButtonClicking.value) {
+      return
+    }
+    
+    const filterButton = target.closest('.filter-button')
+    const filterDropdown = target.closest('.filter-dropdown')
+    const filterIcon = target.closest('.filter-icon')
+    const isFilterIconText = target.textContent === '🔍' || target.textContent?.includes('🔍')
+    
+    if (filterButton || filterDropdown || filterIcon || isFilterIconText) {
+      return
+    }
+    
+    if (!target.closest('.column-selector-wrapper')) {
+      isColumnDropdownOpen.value = false
+    }
+    
+    openFilterDropdown.value = null
+  }
+  
+  setTimeout(() => {
+    if (clickOutsideHandler) {
+      document.addEventListener('click', clickOutsideHandler, false)
+    }
+  }, 0)
+  
+  updateBrowserWidth()
+  updateContainerWidth()
+  window.addEventListener('resize', updateBrowserWidth)
+  window.addEventListener('resize', updateContainerWidth)
+  
+  if (tableContainerRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      updateContainerWidth()
+    })
+    resizeObserver.observe(tableContainerRef.value)
+  }
+})
+
+onUnmounted(() => {
+  if (clickOutsideHandler) {
+    document.removeEventListener('click', clickOutsideHandler)
+  }
+  window.removeEventListener('resize', updateBrowserWidth)
+  window.removeEventListener('resize', updateContainerWidth)
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+  }
+})
+
+watch(() => tableContainerRef.value, (el) => {
+  if (el && resizeObserver) {
+    resizeObserver.observe(el)
+  }
+}, { immediate: true })
+
+// 선택된 행 ID를 외부에서 접근할 수 있도록 expose
+defineExpose({
+  selectedRowIds: computed(() => selectedRowIds.value)
+})
+</script>
+
+<style scoped>
+.reusable-table-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-height: 0;
+}
+
+.table-container {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  background-color: #ffffff;
+  min-height: 0;
+  flex: 1;
+}
+
+.table-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+@media (max-width: 1919px) {
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .table-wrapper {
+    min-width: 1920px;
+  }
+  
+  .data-item-wrapper {
+    min-width: 1920px;
+  }
+}
+
+.table-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  background-color: #f8fafc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.top-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 16px;
+}
+
+.data-count-info {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+}
+
+.data-count-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.data-count-text strong {
+  color: #334155;
+  font-weight: 600;
+}
+
+.filtered-count {
+  color: #3b82f6;
+  margin-left: 4px;
+}
+
+.filtered-count strong {
+  color: #2563eb;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.button-group {
+  display: flex;
+  gap: 16px;
+}
+
+.grid-header {
+  display: grid;
+  grid-template-rows: 40px;
+  border-collapse: collapse;
+}
+
+.grid-header .header-cell {
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color 0.2s;
+  overflow: visible;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.grid-header .header-cell.filtered {
+  background-color: #dbeafe;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-rows: 40px;
+  border-collapse: collapse;
+}
+
+.data-cell:not(.data-cell-id) {
+  border-right: 1px solid #e2e8f0;
+}
+
+.data-cell-id {
+  font-weight: 600;
+  color: #1e40af;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid #7dd3fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.sticky-checkbox-column {
+  position: sticky;
+  left: 0;
+  z-index: 20;
+}
+
+.sticky-id-column {
+  position: sticky;
+  z-index: 20;
+}
+
+.table-header .sticky-checkbox-column {
+  background-color: #f1f5f9 !important;
+  z-index: 40;
+  position: sticky;
+  left: 0;
+}
+
+.table-header .sticky-id-column {
+  background-color: #f1f5f9 !important;
+  z-index: 40;
+  position: sticky;
+}
+
+.table-header .sticky-id-column.filtered {
+  background-color: #dbeafe !important;
+}
+
+.data-item-even .sticky-id-column {
+  background-color: #e0f2fe !important;
+}
+
+.data-item-odd .sticky-id-column {
+  background-color: #dbeafe !important;
+}
+
+.data-cell {
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.table-body {
+  position: relative;
+  overflow: visible;
+}
+
+.data-item-wrapper {
+  position: absolute;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.data-item-even {
+  background-color: #ffffff;
+}
+
+.data-item-even .data-cell-id {
+  background-color: rgba(239, 246, 255, 0.3);
+  color: #1d4ed8;
+  font-weight: 700;
+  border-right-width: 2px;
+}
+
+.data-item-odd {
+  background-color: #f9fafb;
+}
+
+.data-item-odd .data-cell-id {
+  background-color: #dbeafe;
+  border-right: 2px solid #60a5fa;
+}
+
+/* 컬럼 선택 드롭다운 스타일 */
+.column-selector-container {
+  display: flex;
+  align-items: center;
+}
+
+.column-selector-wrapper {
+  position: relative;
+}
+
+.column-selector-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #475569;
+  transition: all 0.2s;
+}
+
+.column-selector-button:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.dropdown-arrow {
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.column-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+  min-width: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #f1f5f9;
+}
+
+.dropdown-content {
+  padding: 8px;
+}
+
+.column-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  font-size: 0.875rem;
+  color: #475569;
+}
+
+.column-checkbox-label:hover {
+  background-color: #f1f5f9;
+}
+
+.column-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+/* 필터 버튼 및 드롭다운 스타일 */
+.filter-button {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  margin-left: 4px;
+  position: relative;
+}
+
+.filter-button:hover {
+  background-color: #f1f5f9;
+}
+
+.filter-button.active {
+  background-color: #e0f2fe;
+  color: #2563eb;
+}
+
+.filter-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 300px;
+  padding: 12px;
+  display: block !important;
+}
+
+.filter-section {
+  margin-bottom: 12px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-option {
+  padding: 6px 12px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.filter-option:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.filter-option.active {
+  background-color: #3b82f6;
+  color: #ffffff;
+  border-color: #3b82f6;
+}
+
+.filter-search-input {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-clear-button {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.filter-clear-button:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.filter-clear-button:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.header-cell {
+  position: relative;
+}
+
+.checkbox-input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.grid-header .header-cell.sticky-checkbox-column {
+  padding: 0.75rem 0;
+  min-width: 0;
+}
+
+.grid-header .header-cell.sticky-checkbox-column .header-content {
+  justify-content: center;
+  padding: 0;
+  width: 100%;
+}
+
+.data-cell-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f8fafc;
+  padding: 0.75rem 0;
+  min-width: 0;
+}
+
+.data-item-even .data-cell-checkbox {
+  background-color: #ffffff;
+}
+
+.data-item-odd .data-cell-checkbox {
+  background-color: #f9fafb;
+}
+
+.table-header .sticky-checkbox-column {
+  background-color: #f1f5f9 !important;
+}
+
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+}
+
+.resize-handle:hover {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.header-cell:hover .resize-handle {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* 버튼 관련 스타일은 Button.vue 컴포넌트에 포함되어 있음 */
+</style>
+
