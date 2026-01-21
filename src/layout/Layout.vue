@@ -11,8 +11,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useNavigationStore } from '../stores/navigation'
+import { useCommonCodeStore } from '../stores/commonCode'
 import Header from './Header.vue'
 import Sidebar from './Sidebar.vue'
 import SystemStatusView from '../components/views/SystemStatusView.vue'
@@ -23,6 +24,16 @@ import DeviceManagementView from '../components/views/DeviceManagementView.vue'
 import '../assets/layout.css'
 
 const navigationStore = useNavigationStore()
+const commonCodeStore = useCommonCodeStore()
+
+// 페이지 최초 로드 시 CommonCode 스토어 로드 (캐싱)
+onMounted(async () => {
+  if (commonCodeStore.items.length === 0) {
+    console.log('CommonCode 스토어 초기 로드 시작...')
+    await commonCodeStore.fetchCommonCodes()
+    console.log('CommonCode 스토어 초기 로드 완료:', commonCodeStore.items.length, '개')
+  }
+})
 
 const components = {
   'system-status': SystemStatusView,

@@ -103,8 +103,9 @@
               />
             </div>
           </div>
-          <!-- ID 컬럼 -->
+          <!-- ID 컬럼 (idField가 있을 때만 표시) -->
           <div
+            v-if="idField && idField.trim() !== ''"
             class="header-cell bg-slate-100 border-r sticky-id-column"
             :class="{ 'filtered': columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
             :style="{ 
@@ -234,8 +235,9 @@
       <div
         class="table-body"
         :style="{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }"
+        :key="`table-body-${sortedRowsHash || 'default'}`"
       >
-        <template v-for="virtualRow in virtualizer.getVirtualItems()" :key="virtualRow.key">
+        <template v-for="virtualRow in virtualizer.getVirtualItems()" :key="`${virtualRow.key}-${sortedRowsHash?.substring?.(0, 8) || ''}`">
           <!-- 각 데이터 항목을 개별적으로 배치 (1행) -->
           <div
             class="data-item-wrapper"
@@ -269,8 +271,9 @@
                   class="checkbox-input"
                 />
               </div>
-              <!-- ID 컬럼 -->
+              <!-- ID 컬럼 (idField가 있을 때만 표시) -->
               <div
+                v-if="idField && idField.trim() !== ''"
                 class="data-cell data-cell-id border-r border-slate-300 font-medium sticky-id-column"
                 :style="{ 
                   left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
@@ -285,11 +288,11 @@
                   <component
                     v-if="column.cellComponent"
                     :is="column.cellComponent"
-                    :value="sortedRows[virtualRow.index]?.getValue(column.id)"
+                    :value="sortedRows[virtualRow.index]?.original?.[column.id]"
                     :row="sortedRows[virtualRow.index]"
                   />
                   <span v-else class="text-sm text-slate-700">
-                    {{ sortedRows[virtualRow.index]?.getValue(column.id) }}
+                    {{ sortedRows[virtualRow.index]?.original?.[column.id] }}
                   </span>
                 </div>
               </template>
@@ -303,7 +306,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useVueTable, getCoreRowModel, getSortedRowModel } from '@tanstack/vue-table'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import type { ColumnDef } from '@tanstack/vue-table'
@@ -594,9 +597,39 @@ const visibleColumnsList = computed(() => {
 const internalData = ref([...props.modelValue])
 
 // props.modelValue가 변경되면 내부 데이터도 업데이트
-watch(() => props.modelValue, (newData) => {
-  internalData.value = [...newData]
-}, { deep: true })
+watch(
+  () => props.modelValue,
+  (newData, oldData) => {
+    // 배열 참조가 변경되었거나, 길이가 변경되었거나, 내용이 변경되었는지 확인
+    // 첫 번째와 마지막 항목의 주요 필드를 비교하여 변경 감지
+    const isChanged = 
+      newData !== oldData || 
+      !oldData ||
+      newData.length !== oldData.length ||
+      (newData.length > 0 && oldData && (
+        // 첫 번째 항목 비교
+        (newData[0] && oldData[0] && (
+          newData[0].ch_id !== oldData[0].ch_id ||
+          newData[0].hq_code !== oldData[0].hq_code ||
+          newData[0].route_code !== oldData[0].route_code ||
+          newData[0].branch_code !== oldData[0].branch_code
+        )) ||
+        // 마지막 항목 비교
+        (newData.length > 1 && oldData.length > 1 && 
+         newData[newData.length - 1] && oldData[oldData.length - 1] && (
+          newData[newData.length - 1].ch_id !== oldData[oldData.length - 1].ch_id ||
+          newData[newData.length - 1].hq_code !== oldData[oldData.length - 1].hq_code ||
+          newData[newData.length - 1].route_code !== oldData[oldData.length - 1].route_code ||
+          newData[newData.length - 1].branch_code !== oldData[oldData.length - 1].branch_code
+        ))
+      ))
+    
+    if (isChanged) {
+      internalData.value = [...newData]
+    }
+  },
+  { deep: true, immediate: true }
+)
 
 // 필터링된 데이터
 const filteredData = computed(() => {
@@ -629,14 +662,17 @@ const filteredDataCount = computed(() => {
 
 // TanStack Table 컬럼 정의 생성
 const tableColumns = computed<ColumnDef<any>[]>(() => {
-  const cols: ColumnDef<any>[] = [
-    {
+  const cols: ColumnDef<any>[] = []
+  
+  // idField가 있을 때만 ID 컬럼 추가
+  if (props.idField && props.idField.trim() !== '') {
+    cols.push({
       accessorKey: props.idField,
       header: 'ID',
       size: props.idColumnWidth,
       enableSorting: true
-    }
-  ]
+    })
+  }
   
   visibleColumnsList.value.forEach(col => {
     cols.push({
@@ -692,7 +728,9 @@ const containerWidth = ref(0)
 // 테이블 최소 너비
 const minTableWidth = computed(() => {
   const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
-  const idW = getColumnWidth(props.idField, props.idColumnWidth)
+  const idW = (props.idField && props.idField.trim() !== '') 
+    ? getColumnWidth(props.idField, props.idColumnWidth) 
+    : 0
   const visibleWidths = visibleColumnsList.value.map(col => 
     getColumnWidth(col.id, col.size)
   )
@@ -703,7 +741,8 @@ const minTableWidth = computed(() => {
 // Grid 컬럼 템플릿 계산
 const gridTemplateColumns = computed(() => {
   const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
-  const idBaseW = getColumnWidth(props.idField, props.idColumnWidth)
+  const hasIdColumn = props.idField && props.idField.trim() !== ''
+  const idBaseW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
   const visibleColumnBaseWidths = visibleColumnsList.value.map(col => 
     getColumnWidth(col.id, col.size)
   )
@@ -717,9 +756,17 @@ const gridTemplateColumns = computed(() => {
       const ratio = 1920 / currentTotal
       const expandedIdW = idBaseW * ratio
       const expandedColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
-      return `${checkboxW}px ${expandedIdW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
+      if (hasIdColumn) {
+        return `${checkboxW}px ${expandedIdW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
+      } else {
+        return `${checkboxW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
+      }
     }
-    return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    if (hasIdColumn) {
+      return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    } else {
+      return `${checkboxW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    }
   }
   
   const tableContainerW = containerWidth.value || currentTotal
@@ -729,9 +776,17 @@ const gridTemplateColumns = computed(() => {
     const ratio = availableWidth / totalBaseWidth
     const idW = idBaseW * ratio
     const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
-    return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+    if (hasIdColumn) {
+      return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+    } else {
+      return `${checkboxW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+    }
   } else {
-    return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    if (hasIdColumn) {
+      return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    } else {
+      return `${checkboxW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
+    }
   }
 })
 
@@ -739,17 +794,58 @@ const gridTemplateColumns = computed(() => {
 const tableContainerRef = ref<HTMLElement | null>(null)
 
 // 정렬된 행 데이터
-const sortedRows = computed(() => table.getRowModel().rows)
+const sortedRows = computed(() => {
+  return table.getRowModel().rows
+})
+
+// sortedRows의 데이터 해시를 계산하여 virtualizer가 변경을 감지하도록 함
+const getRowIdSafe = (row: any) => row ? getRowId(row) : ''
+
+const sortedRowsHash = computed(() => {
+  try {
+    if (!sortedRows.value || sortedRows.value.length === 0) return 'empty'
+    const first = sortedRows.value[0]?.original
+    const last = sortedRows.value[sortedRows.value.length - 1]?.original
+    
+    const firstId = getRowIdSafe(first)
+    const firstHq = first?.hq_code || ''
+    const firstRoute = first?.route_code || ''
+    const lastId = getRowIdSafe(last)
+    const lastHq = last?.hq_code || ''
+    const lastRoute = last?.route_code || ''
+    
+    return `${sortedRows.value.length}-${firstId}-${firstHq}-${firstRoute}-${lastId}-${lastHq}-${lastRoute}`
+  } catch (error) {
+    return 'error'
+  }
+})
 
 const virtualizer = useVirtualizer({
   get count() {
+    const _ = sortedRowsHash.value
     return sortedRows.value.length
   },
   getScrollElement: () => tableContainerRef.value,
   estimateSize: () => 40,
   overscan: 5,
-  getItemKey: (index) => getRowId(sortedRows.value[index]?.original) || `item-${index}`
+  getItemKey: (index) => {
+    const row = sortedRows.value[index]
+    const rowId = getRowId(row?.original) || `item-${index}`
+    const hash = sortedRowsHash.value || 'default'
+    const dataHash = typeof hash === 'string' ? hash.substring(0, 8) : 'default'
+    return `${rowId}-${dataHash}`
+  }
 })
+
+// sortedRows가 변경되면 virtualizer를 강제로 업데이트
+watch(
+  () => sortedRowsHash.value,
+  async () => {
+    await nextTick()
+    // virtualizer가 자동으로 재계산되도록 트리거
+  },
+  { immediate: true }
+)
 
 // 브라우저 너비 업데이트
 const updateBrowserWidth = () => {

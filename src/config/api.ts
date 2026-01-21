@@ -7,21 +7,9 @@ const getApiBaseUrl = (): string => {
   // Vite는 import.meta.env를 사용하여 환경 변수에 접근
   const baseUrl = import.meta.env.VITE_API_BASE_URL
   
-  if (!baseUrl) {
-    // 기본값: 개발 환경
-    if (import.meta.env.DEV) {
-      return 'http://localhost:8000/api'
-    }
-    // 프로덕션 환경에서는 상대 경로 사용
-    return '/api'
-  }
-  
-  // baseUrl이 /api로 끝나지 않으면 추가
-  if (!baseUrl.endsWith('/api')) {
-    return baseUrl.endsWith('/') ? `${baseUrl}api` : `${baseUrl}/api`
-  }
-  
-  return baseUrl
+  // FastAPI는 /api 경로를 사용하므로 baseURL은 빈 문자열
+  // 프록시가 /api 경로를 FastAPI 서버로 전달
+  return ''
 }
 
 // API 설정

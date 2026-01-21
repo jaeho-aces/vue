@@ -166,55 +166,6 @@ const formFields: FormField[] = [
   { id: 'ktCctv', label: 'KT CCTV', type: 'yesno', required: true },
   { id: 'registered', label: '등록 일자', type: 'text', placeholder: 'YYYY-MM-DD' }
 ]
-
-// 데이터 생성 함수
-const generateData = (count: number): Media[] => {
-  const types = ['본부', '지사']
-  const locations = ['본관 1층 로비', '수원 IC', '서버실', '동탄 JC', '오산 IC', '옥상', '후문', '안성 휴게소', '죽전 휴게소', '상황실']
-  const routes = ['경부선', '영동선', '동해선', '중앙선', '호남선', '수도권제2순환']
-  const streamTypes = ['모니터링', '대국민', '보안용', '분석용']
-  const statuses: ('active' | 'warning' | 'inactive')[] = ['active', 'warning', 'inactive']
-
-  const data: Media[] = []
-  
-  for (let i = 1; i <= count; i++) {
-    const id = `MI-${String(i).padStart(3, '0')}`
-    const type = types[Math.floor(Math.random() * types.length)]
-    const camId = `CAM-${String(Math.floor(Math.random() * 100) + 1).padStart(3, '0')}`
-    const location = locations[Math.floor(Math.random() * locations.length)]
-    const route = routes[Math.floor(Math.random() * routes.length)]
-    const publicUrl = `rtsp://public.server/cam${String(i).padStart(3, '0')}`
-    const streamType = streamTypes[Math.floor(Math.random() * streamTypes.length)]
-    const internalStream = `rtsp://10.0.0.${Math.floor(Math.random() * 3) + 1}/cam${String(i).padStart(3, '0')}`
-    const externalStream = Math.random() > 0.3 ? `rtsp://ext.server/cam${String(i).padStart(3, '0')}` : '-'
-    const ktCctv = Math.random() > 0.4 ? 'Y' : 'N'
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    
-    const registeredDate = new Date()
-    registeredDate.setDate(registeredDate.getDate() - Math.floor(Math.random() * 730))
-    const registered = registeredDate.toISOString().slice(0, 10)
-
-    data.push({
-      id,
-      type,
-      camId,
-      location,
-      route,
-      publicUrl,
-      streamType,
-      internalStream,
-      externalStream,
-      ktCctv,
-      status,
-      registered
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화 (5000개)
-rawData.value = generateData(5000)
 </script>
 
 <style scoped>

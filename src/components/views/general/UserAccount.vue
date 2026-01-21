@@ -92,36 +92,6 @@ const formFields: FormField[] = [
   { id: 'phone', label: '전화번호', type: 'text', required: false, placeholder: '예: 010-1234-5678' },
   { id: 'note', label: '비고', type: 'textarea', required: false, rows: 3 }
 ]
-
-// 데이터 생성 함수
-const generateData = (count: number): UserAccount[] => {
-  const userIds = ['admin', 'user01', 'user02', 'user03', 'user04', 'user05', 'user06', 'user07', 'user08', 'user09', 'user10']
-  const names = ['홍길동', '김철수', '이영희', '박민수', '최지영', '정수진', '한소희', '강동원', '송혜교', '이병헌', '전지현']
-  const groups = ['관리자그룹', '운영자그룹', '사용자그룹', '관리자그룹', '사용자그룹', '조회자그룹', '운영자그룹', '사용자그룹', '조회자그룹', '운영자그룹', '사용자그룹']
-  const phones = ['010-1234-5678', '010-2345-6789', '010-3456-7890', '010-4567-8901', '010-5678-9012', '010-6789-0123', '010-7890-1234', '010-8901-2345', '010-9012-3456', '010-0123-4567', '010-1234-5678']
-  const notes = ['시스템 관리자', '일반 사용자', '일반 사용자', '시스템 관리자', '일반 사용자', '조회 전용', '운영 담당자', '일반 사용자', '조회 전용', '운영 담당자', '일반 사용자']
-
-  const data: UserAccount[] = []
-  
-  for (let i = 0; i < count && i < userIds.length; i++) {
-    data.push({
-      id: `USER-${String(i + 1).padStart(3, '0')}`,
-      userId: userIds[i],
-      name: names[i],
-      group: groups[i],
-      videoSave: Math.random() > 0.3 ? 'Y' : 'N',
-      smsSend: Math.random() > 0.3 ? 'Y' : 'N',
-      maxSplit: Math.floor(Math.random() * 5) + 1,
-      phone: phones[i],
-      note: notes[i]
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화 (11개)
-rawData.value = generateData(11)
 </script>
 
 <style scoped>

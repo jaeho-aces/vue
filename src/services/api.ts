@@ -7,14 +7,99 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } f
 import { apiConfig, getApiUrl } from '../config/api'
 import { useAuthStore } from '../stores/auth'
 
-// Axios 인스턴스 생성
+// FastAPI 전용 Axios 인스턴스 생성 (baseURL 없음 - 프록시가 /api 경로를 처리)
+const fastApiClient: AxiosInstance = axios.create({
+  baseURL: '',  // 빈 문자열로 설정하여 전체 경로 사용
+  timeout: apiConfig.timeout,
+  headers: apiConfig.headers
+})
+
+// 공용 Axios 인스턴스 (일반 API 호출용)
 const apiClient: AxiosInstance = axios.create({
   baseURL: apiConfig.baseURL,
   timeout: apiConfig.timeout,
   headers: apiConfig.headers
 })
 
-// 요청 인터셉터
+// FastAPI 클라이언트 요청 인터셉터
+fastApiClient.interceptors.request.use(
+  (config) => {
+    // 인증 토큰 추가
+    const authStore = useAuthStore()
+    if (authStore.token) {
+      config.headers.Authorization = `Bearer ${authStore.token}`
+    }
+    
+    // 상세 요청 로깅 (개발 환경)
+    if (import.meta.env.DEV) {
+      const fullURL = `${config.baseURL || ''}${config.url || ''}`
+      console.group(`[FastAPI Request] ${config.method?.toUpperCase()} ${fullURL}`)
+      console.log('Base URL:', config.baseURL)
+      console.log('URL:', config.url)
+      console.log('Full URL:', fullURL)
+      console.log('Params:', config.params)
+      console.log('Headers:', config.headers)
+      console.log('Data:', config.data)
+      console.log('Timeout:', config.timeout)
+      console.groupEnd()
+    }
+    
+    return config
+  },
+  (error: AxiosError) => {
+    console.error('[FastAPI Request Error]', error)
+    return Promise.reject(error)
+  }
+)
+
+// FastAPI 클라이언트 응답 인터셉터
+fastApiClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    // 상세 응답 로깅 (개발 환경)
+    if (import.meta.env.DEV) {
+      const fullURL = `${response.config.baseURL || ''}${response.config.url || ''}`
+      console.group(`[FastAPI Response] ${response.config.method?.toUpperCase()} ${fullURL}`)
+      console.log('Status:', response.status, response.statusText)
+      console.log('Data:', response.data)
+      console.groupEnd()
+    }
+    return response
+  },
+  (error: AxiosError) => {
+    // 상세 에러 로깅
+    const fullURL = error.config ? `${error.config.baseURL || ''}${error.config.url || ''}` : 'Unknown URL'
+    
+    console.group(`[FastAPI Error] ${error.config?.method?.toUpperCase() || 'UNKNOWN'} ${fullURL}`)
+    
+    if (error.response) {
+      const status = error.response.status
+      const data = error.response.data as any
+      
+      console.error('Status:', status, error.response.statusText)
+      console.error('Response Data:', data)
+      
+      if (status === 401) {
+        console.error('❌ 인증 실패: 로그인이 필요합니다.')
+        const authStore = useAuthStore()
+        authStore.logout()
+      } else if (status === 404) {
+        console.error('❌ 요청한 리소스를 찾을 수 없습니다.')
+      } else if (status >= 500) {
+        console.error('❌ 서버 오류가 발생했습니다.')
+      }
+    } else if (error.request) {
+      console.error('❌ 네트워크 오류 또는 서버 응답 없음')
+      console.error('확인 사항:')
+      console.error('1. FastAPI 백엔드 서버가 실행 중인지 확인 (python backend/main.py)')
+      console.error('2. Vite 프록시 설정이 올바른지 확인 (/api 경로)')
+    }
+    
+    console.groupEnd()
+    return Promise.reject(error)
+  }
+)
+
+// 공용 클라이언트 요청 인터셉터
 apiClient.interceptors.request.use(
   (config) => {
     // 인증 토큰 추가
@@ -143,6 +228,35 @@ apiClient.interceptors.response.use(
   }
 )
 
+// FastAPI 백엔드용 API 헬퍼 함수들
+const fastApiApi = {
+  // FastAPI /get-db-array를 사용한 데이터 조회
+  getDbArray: <T = any>(tableName: string, params: any): Promise<AxiosResponse<T[]>> => {
+    const requestData = {
+      target: `/${tableName}/`,
+      layout: params.layout || [{ field: '*' }],
+      query: params.query || [],
+      where: params.where || '',
+      order: params.order || ''
+    }
+    // 프록시를 통해 /api 경로를 FastAPI 서버로 전달
+    return fastApiClient.post<T[]>('/api/get-db-array', requestData)
+  },
+
+  // FastAPI /rest-access-page를 사용한 REST API 호출
+  restAccess: <T = any>(tableName: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', data?: any, key?: string): Promise<AxiosResponse<T>> => {
+    const url = `/api/rest-access-page/${tableName}`
+    
+    if (method === 'GET') {
+      return fastApiClient.get<T>(url, { params: data })
+    } else if (method === 'DELETE') {
+      return fastApiClient.delete<T>(url, { params: { key: key || data } })
+    } else {
+      return fastApiClient[method.toLowerCase() as 'post' | 'put']<T>(url, data)
+    }
+  }
+}
+
 // API 메서드 래퍼 함수들
 export const api = {
   // GET 요청
@@ -168,7 +282,10 @@ export const api = {
   // DELETE 요청
   delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<AxiosResponse<T>> => {
     return apiClient.delete<T>(getApiUrl(url), config)
-  }
+  },
+
+  // FastAPI 백엔드 전용 API
+  fastapi: fastApiApi
 }
 
 // 기본 export

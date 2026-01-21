@@ -7,6 +7,7 @@
     modal-title="버전 관리"
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
+    id-field="version_id"
     :hide-edit-button="true"
     @update="handleDataUpdate"
     @delete="handleDataDelete"

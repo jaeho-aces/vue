@@ -56,112 +56,105 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
   },
 
   actions: {
-    // 헬퍼 인스턴스 생성 (변환 함수 없음)
+    // 백엔드 API 응답을 프론트엔드 형식으로 변환
+    transformFromAPI(data: any): MediaServer {
+      return {
+        id: data.id,
+        fms_id: data.fms_id || '',
+        fms_name: data.fms_name || '',
+        fms_ip: data.fms_ip || '',
+        fms_ext_ip: data.fms_ext_ip,
+        fms_con_id: data.fms_con_id || '',
+        fms_passwd: data.fms_passwd || '',
+        fms_port: data.fms_port || 0,
+        svr_type: data.svr_type || '',
+        alive: data.alive || '',
+        alive_time: data.alive_time,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
+    },
+
+    // 프론트엔드 데이터를 백엔드 API 형식으로 변환
+    transformToAPI(data: any): any {
+      return {
+        fms_id: data.fms_id,
+        fms_name: data.fms_name,
+        fms_ip: data.fms_ip,
+        fms_ext_ip: data.fms_ext_ip,
+        fms_con_id: data.fms_con_id,
+        fms_passwd: data.fms_passwd,
+        fms_port: data.fms_port,
+        svr_type: data.svr_type,
+        alive: data.alive,
+        alive_time: data.alive_time
+      }
+    },
+
+    // 헬퍼 인스턴스 생성
     getHelper() {
       return new ApiStoreHelper<MediaServer, MediaServer>(
-        '/media-server-info', // 백엔드 API 엔드포인트 (필요시 수정)
-        null, // 변환 함수 없음
-        null, // 변환 함수 없음
+        '/media-server-info',
+        this.transformFromAPI.bind(this),
+        this.transformToAPI.bind(this),
         this.$state as BaseStoreState<MediaServer>
       )
     },
 
-    // 데이터 목록 가져오기
+    // PHP 테이블 정보
+    getPhpTableName() {
+      return 'MGMT_FMS'
+    },
+
+    getPhpTableKey() {
+      return 'FMS_ID'
+    },
+
+    // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchMediaServers(forceRefresh = false) {
-      await this.getHelper().fetchAll(forceRefresh, 5 * 60 * 1000, '미디어 서버 정보 데이터')
+      await this.getHelper().fetchAll(
+        forceRefresh, 
+        5 * 60 * 1000, 
+        '미디어 서버 정보 데이터',
+        this.getPhpTableName()
+      )
     },
 
-    // 데이터 생성
+    // 데이터 생성 - PHP 백엔드 사용
     async createMediaServer(data: MediaServer) {
-      return await this.getHelper().create(data)
+      return await this.getHelper().create(
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 수정
+    // 데이터 수정 - PHP 백엔드 사용
     async updateMediaServer(serverId: string, data: Partial<MediaServer>) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const apiData = { ...data, fms_id: serverId }
-        
-        console.log('수정 요청 데이터:', apiData)
-        
-        const response = await api.put<MediaServer>(
-          `/media-server-info/${serverId}`,
-          apiData
-        )
-        
-        const index = this.items.findIndex(item => item.fms_id === serverId)
-        if (index !== -1) {
-          this.items[index] = response.data
-        }
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 수정 완료:', response.data)
-        return response.data
-      } catch (error: any) {
-        console.error('데이터 수정 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      return await this.getHelper().update(
+        serverId,
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 삭제
+    // 데이터 삭제 - PHP 백엔드 사용
     async deleteMediaServer(serverId: string) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        await api.delete(`/media-server-info/${serverId}`)
-        
-        this.items = this.items.filter(item => item.fms_id !== serverId)
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', serverId)
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().delete(
+        serverId,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 여러 개 삭제
+    // 여러 개 삭제 - PHP 백엔드 사용
     async deleteMediaServers(serverIds: string[]) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const deletePromises = serverIds.map(id => api.delete(`/media-server-info/${id}`))
-        
-        await Promise.all(deletePromises)
-        
-        this.items = this.items.filter(item => !serverIds.includes(item.fms_id))
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', serverIds.length, '개')
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().deleteMany(
+        serverIds,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
     // 스토어 초기화

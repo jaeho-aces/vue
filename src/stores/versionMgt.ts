@@ -57,112 +57,95 @@ export const useVersionMgtStore = defineStore('versionMgt', {
   },
 
   actions: {
-    // 헬퍼 인스턴스 생성 (변환 함수 없음)
+    // 백엔드 API 응답을 프론트엔드 형식으로 변환
+    transformFromAPI(data: any): Version {
+      return {
+        id: data.id,
+        version_id: data.key || data.version_id, // key를 version_id로 매핑
+        product_name: data.product || data.product_name, // product를 product_name으로 매핑
+        version: data.version || data.version,
+        storage_path: data.path || data.storage_path, // path를 storage_path로 매핑
+        release_date: data.release_date || data.release_date,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
+    },
+
+    // 프론트엔드 데이터를 백엔드 API 형식으로 변환
+    transformToAPI(data: any): any {
+      return {
+        key: data.key || data.version_id, // version_id를 key로 매핑
+        product: data.product || data.product_name, // product_name을 product로 매핑
+        version: data.version,
+        path: data.path || data.storage_path, // storage_path를 path로 매핑
+        release_date: data.release_date
+      }
+    },
+
+    // 헬퍼 인스턴스 생성
     getHelper() {
       return new ApiStoreHelper<Version, Version>(
         '/version-mgt',
-        null, // 변환 함수 없음
-        null, // 변환 함수 없음
+        this.transformFromAPI.bind(this),
+        this.transformToAPI.bind(this),
         this.$state as BaseStoreState<Version>
       )
     },
 
-    // 데이터 목록 가져오기
+    // PHP 테이블 정보
+    getPhpTableName() {
+      return 'MGMT_VERSION'
+    },
+
+    getPhpTableKey() {
+      return 'KEY'
+    },
+
+    // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchVersions(forceRefresh = false) {
-      await this.getHelper().fetchAll(forceRefresh, 5 * 60 * 1000, '버전 관리 데이터')
+      await this.getHelper().fetchAll(
+        forceRefresh, 
+        5 * 60 * 1000, 
+        '버전 관리 데이터',
+        this.getPhpTableName()
+      )
     },
 
-    // 데이터 생성
+    // 데이터 생성 - PHP 백엔드 사용
     async createVersion(data: Version) {
-      return await this.getHelper().create(data)
+      return await this.getHelper().create(
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 수정
+    // 데이터 수정 - PHP 백엔드 사용
     async updateVersion(versionId: string, data: Partial<Version>) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const apiData = { ...data, version_id: versionId }
-        
-        console.log('수정 요청 데이터:', apiData)
-        
-        const response = await api.put<Version>(
-          `/version-mgt/${versionId}`,
-          apiData
-        )
-        
-        const index = this.items.findIndex(item => item.version_id === versionId)
-        if (index !== -1) {
-          this.items[index] = response.data
-        }
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 수정 완료:', response.data)
-        return response.data
-      } catch (error: any) {
-        console.error('데이터 수정 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      return await this.getHelper().update(
+        versionId,
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 삭제
+    // 데이터 삭제 - PHP 백엔드 사용
     async deleteVersion(versionId: string) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        await api.delete(`/version-mgt/${versionId}`)
-        
-        this.items = this.items.filter(item => item.version_id !== versionId)
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', versionId)
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().delete(
+        versionId,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 여러 개 삭제
+    // 여러 개 삭제 - PHP 백엔드 사용
     async deleteVersions(versionIds: string[]) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const deletePromises = versionIds.map(id => api.delete(`/version-mgt/${id}`))
-        
-        await Promise.all(deletePromises)
-        
-        this.items = this.items.filter(item => !versionIds.includes(item.version_id))
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', versionIds.length, '개')
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().deleteMany(
+        versionIds,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
     // 스토어 초기화

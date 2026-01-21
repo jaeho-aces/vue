@@ -89,45 +89,6 @@ const formFields: FormField[] = [
   { id: 'useYn', label: '사용 여부', type: 'yesno', required: true },
   { id: 'registered', label: '등록 일자', type: 'text', required: false, placeholder: 'YYYY-MM-DD' }
 ]
-
-// 데이터 생성 함수
-const generateData = (count: number): Headquarters[] => {
-  const codes = ['HQ01', 'HQ02', 'HQ03', 'HQ04', 'HQ05', 'HQ06']
-  const names = ['수도권본부', '강원본부', '충청본부', '전라본부', '경상본부', '제주본부']
-  const organizations = ['한국도로공사', '한국도로공사', '한국도로공사', '한국도로공사', '한국도로공사', '한국도로공사']
-  const descriptions = [
-    '수도권 지역 본부입니다.',
-    '강원 지역 본부입니다.',
-    '충청 지역 본부입니다.',
-    '전라 지역 본부입니다.',
-    '경상 지역 본부입니다.',
-    '제주 지역 본부입니다.'
-  ]
-
-  const data: Headquarters[] = []
-  
-  for (let i = 0; i < count && i < names.length; i++) {
-    const registeredDate = new Date()
-    registeredDate.setDate(registeredDate.getDate() - Math.floor(Math.random() * 365))
-    const registered = registeredDate.toISOString().slice(0, 10)
-
-    data.push({
-      id: `HQ-${String(i + 1).padStart(3, '0')}`,
-      code: codes[i],
-      name: names[i],
-      organization: organizations[i],
-      description: descriptions[i],
-      sortOrder: i + 1,
-      useYn: Math.random() > 0.2 ? 'Y' : 'N',
-      registered
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화
-rawData.value = generateData(6)
 </script>
 
 <style scoped>

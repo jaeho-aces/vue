@@ -82,48 +82,6 @@ const formFields: FormField[] = [
   { id: 'password', label: '암호', type: 'text', required: true },
   { id: 'targetRootPath', label: '대상 서버 루트 경로', type: 'text', required: true, placeholder: '예: /data/transfer' }
 ]
-
-// 버튼 핸들러와 업데이트 핸들러는 Table 내부에서 자동으로 처리됨
-// v-model로 데이터가 자동으로 동기화됨
-
-// 데이터 생성 함수
-const generateData = (count: number): VideoTransferServer[] => {
-  const names = ['TransferServer-01', 'TransferServer-02', 'TransferServer-03', 'TransferServer-04', 'TransferServer-05']
-  const ips = ['192.168.1.201', '192.168.1.202', '192.168.1.203', '192.168.1.204', '192.168.1.205']
-  const targetIps = ['192.168.1.251', '192.168.1.252', '192.168.1.253', '192.168.1.254', '192.168.1.255']
-  const types = ['FTP', 'SFTP', 'NFS']
-  const userIds = ['admin', 'transfer', 'user']
-  const paths = ['/data/transfer', '/storage/video', '/mnt/transfer']
-
-  const data: VideoTransferServer[] = []
-  
-  for (let i = 1; i <= count; i++) {
-    const id = `VTS-${String(i).padStart(3, '0')}`
-    const name = names[Math.floor(Math.random() * names.length)]
-    const ip = ips[Math.floor(Math.random() * ips.length)]
-    const targetIp = targetIps[Math.floor(Math.random() * targetIps.length)]
-    const type = types[Math.floor(Math.random() * types.length)]
-    const userId = userIds[Math.floor(Math.random() * userIds.length)]
-    const password = '••••••••'
-    const targetRootPath = paths[Math.floor(Math.random() * paths.length)]
-
-    data.push({
-      id,
-      name,
-      ip,
-      targetIp,
-      type,
-      userId,
-      password,
-      targetRootPath
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화 (5000개)
-rawData.value = generateData(5000)
 </script>
 
 <style scoped>

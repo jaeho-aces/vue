@@ -82,112 +82,151 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
   },
 
   actions: {
-    // 헬퍼 인스턴스 생성 (변환 함수 없음)
+    // 백엔드 API 응답을 프론트엔드 형식으로 변환
+    transformFromAPI(data: any): Camera {
+      return {
+        id: data.id,
+        cctv_id: data.cctv_id || '',
+        camera_no: data.camera_no || data.camera_no?.toString() || '',
+        hq_code: data.hq_code || '',
+        branch_code: data.branch_code || '',
+        route_code: data.route_code || '',
+        location: data.location || '',
+        camera_area: data.camera_area || '',
+        enc_url: data.enc_url || '',
+        trans_wms_port: data.trans_wms_port?.toString() || '',
+        link_id_s: data.link_id_s || '',
+        link_id_e: data.link_id_e || '',
+        vlink_id_s: data.vlink_id_s,
+        vlink_id_e: data.vlink_id_e,
+        road_id: data.road_id || '',
+        road_name: data.road_name || '',
+        milepost: data.milepost?.toString() || '',
+        bound: data.bound || '',
+        lat: data.lat?.toString() || '',
+        lng: data.lng?.toString() || '',
+        fileurl_wmv: data.fileurl_wmv || '',
+        fileurl_mp4: data.fileurl_mp4 || '',
+        fileurl_img: data.fileurl_img || '',
+        stat: data.stat || '',
+        alive: data.alive || '',
+        alive_yn: data.alive_yn || '',
+        update_date: data.update_date,
+        last_cctv_time: data.last_cctv_time,
+        hls_url: data.hls_url || '',
+        hls_alive: data.hls_alive || '',
+        hls_duration: data.hls_duration || '',
+        hls_emergency: data.hls_emergency || '',
+        ftp_sent_date: data.ftp_sent_date,
+        reg_date: data.reg_date,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
+    },
+
+    // 프론트엔드 데이터를 백엔드 API 형식으로 변환
+    transformToAPI(data: any): any {
+      return {
+        cctv_id: data.cctv_id,
+        camera_no: data.camera_no,
+        hq_code: data.hq_code,
+        branch_code: data.branch_code,
+        route_code: data.route_code,
+        location: data.location,
+        camera_area: data.camera_area,
+        enc_url: data.enc_url,
+        trans_wms_port: data.trans_wms_port,
+        link_id_s: data.link_id_s,
+        link_id_e: data.link_id_e,
+        vlink_id_s: data.vlink_id_s,
+        vlink_id_e: data.vlink_id_e,
+        road_id: data.road_id,
+        road_name: data.road_name,
+        milepost: data.milepost,
+        bound: data.bound,
+        lat: data.lat,
+        lng: data.lng,
+        fileurl_wmv: data.fileurl_wmv,
+        fileurl_mp4: data.fileurl_mp4,
+        fileurl_img: data.fileurl_img,
+        stat: data.stat,
+        alive: data.alive,
+        alive_yn: data.alive_yn,
+        update_date: data.update_date,
+        last_cctv_time: data.last_cctv_time,
+        hls_url: data.hls_url,
+        hls_alive: data.hls_alive,
+        hls_duration: data.hls_duration,
+        hls_emergency: data.hls_emergency,
+        ftp_sent_date: data.ftp_sent_date,
+        reg_date: data.reg_date
+      }
+    },
+
+    // 헬퍼 인스턴스 생성
     getHelper() {
       return new ApiStoreHelper<Camera, Camera>(
         '/camera-info',
-        null, // 변환 함수 없음
-        null, // 변환 함수 없음
+        this.transformFromAPI.bind(this),
+        this.transformToAPI.bind(this),
         this.$state as BaseStoreState<Camera>
       )
     },
 
-    // 데이터 목록 가져오기
+    // PHP 테이블 정보
+    getPhpTableName() {
+      return 'MGMT_CCTV'
+    },
+
+    getPhpTableKey() {
+      return 'CCTV_ID'
+    },
+
+    // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchCameras(forceRefresh = false) {
-      await this.getHelper().fetchAll(forceRefresh, 5 * 60 * 1000, '카메라 정보 데이터')
+      await this.getHelper().fetchAll(
+        forceRefresh, 
+        5 * 60 * 1000, 
+        '카메라 정보 데이터',
+        this.getPhpTableName()
+      )
     },
 
-    // 데이터 생성
+    // 데이터 생성 - PHP 백엔드 사용
     async createCamera(data: Camera) {
-      return await this.getHelper().create(data)
+      return await this.getHelper().create(
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 수정
+    // 데이터 수정 - PHP 백엔드 사용
     async updateCamera(cameraId: string, data: Partial<Camera>) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const apiData = { ...data, cctv_id: cameraId }
-        
-        console.log('수정 요청 데이터:', apiData)
-        
-        const response = await api.put<Camera>(
-          `/camera-info/${cameraId}`,
-          apiData
-        )
-        
-        const index = this.items.findIndex(item => item.cctv_id === cameraId)
-        if (index !== -1) {
-          this.items[index] = response.data
-        }
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 수정 완료:', response.data)
-        return response.data
-      } catch (error: any) {
-        console.error('데이터 수정 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      return await this.getHelper().update(
+        cameraId,
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 삭제
+    // 데이터 삭제 - PHP 백엔드 사용
     async deleteCamera(cameraId: string) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        await api.delete(`/camera-info/${cameraId}`)
-        
-        this.items = this.items.filter(item => item.cctv_id !== cameraId)
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', cameraId)
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().delete(
+        cameraId,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 여러 개 삭제
+    // 여러 개 삭제 - PHP 백엔드 사용
     async deleteCameras(cameraIds: string[]) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const deletePromises = cameraIds.map(id => api.delete(`/camera-info/${id}`))
-        
-        await Promise.all(deletePromises)
-        
-        this.items = this.items.filter(item => !cameraIds.includes(item.cctv_id))
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', cameraIds.length, '개')
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().deleteMany(
+        cameraIds,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
     // 스토어 초기화

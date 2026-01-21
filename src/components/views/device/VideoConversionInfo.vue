@@ -32,15 +32,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, defineComponent, h, ref } from 'vue'
+import { computed, onMounted, nextTick, defineComponent, h, ref } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import Button from '../../common/Button.vue'
 import DataFormModal from '../../common/DataFormModal.vue'
 import { useVideoConversionInfoStore, type VideoConversion } from '../../../stores/videoConversionInfo'
+import { useCommonCodeStore } from '../../../stores/commonCode'
 
 // Pinia 스토어 사용
 const videoConversionStore = useVideoConversionInfoStore()
+const commonCodeStore = useCommonCodeStore()
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // Table 컴포넌트 참조
@@ -181,12 +183,14 @@ const defaultVisibleColumns = [
 ]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
+// 배열을 스프레드하여 새 참조를 반환하여 Table 컴포넌트의 watch가 확실히 감지하도록 함
 const rawData = computed(() => {
-  console.log('영상변환 채널정보 데이터:', videoConversionStore.items.length, '개')
+  const items = videoConversionStore.items
   if (videoConversionStore.error) {
     console.error('영상변환 채널정보 스토어 에러:', videoConversionStore.error)
   }
-  return videoConversionStore.items
+  // 새 배열을 반환하여 참조 변경을 보장
+  return [...items]
 })
 
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
@@ -360,13 +364,12 @@ const handleBatchModalSubmit = async (data: Record<string, any>) => {
 }
 
 // 컴포넌트 마운트 시 데이터 로드
+// fetchVideoConversions 내부에서 CommonCode 로드 및 매핑을 모두 처리
 onMounted(async () => {
   try {
     await videoConversionStore.fetchVideoConversions()
-    console.log('영상변환 채널정보 로드 완료:', videoConversionStore.items.length, '개')
-    if (videoConversionStore.error) {
-      console.error('영상변환 채널정보 로드 에러:', videoConversionStore.error)
-    }
+    // nextTick으로 DOM 업데이트 대기
+    await nextTick()
   } catch (error) {
     console.error('영상변환 채널정보 로드 실패:', error)
   }

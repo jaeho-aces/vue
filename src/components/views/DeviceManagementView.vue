@@ -42,25 +42,25 @@ const VirtualServerInfo = {
 
 // Tab 배열
 const tabs = [
-  '영상변환 채널정보',
   '영상변환서버 정보',
   '가상서버 정보',
   '영상 파일 전송 서버',
   '미디어 서버 정보',
   '카메라 정보',
   '미디어 정보',
+  '영상변환 채널정보',
   '버전 관리'
 ] as const
 
 // TabContent Record
 const tabContent: Record<string, any> = {
-  '영상변환 채널정보': VideoConversionInfo,
   '영상변환서버 정보': VideoConversionServerInfo,
   '가상서버 정보': VirtualServerInfo,
   '영상 파일 전송 서버': VideoFileTransferServer,
   '미디어 서버 정보': MediaServerInfo,
   '카메라 정보': CameraInfo,
   '미디어 정보': MediaInfo,
+  '영상변환 채널정보': VideoConversionInfo,
   '버전 관리': VersionManagement
 }
 

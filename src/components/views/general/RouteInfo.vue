@@ -89,47 +89,6 @@ const formFields: FormField[] = [
   { id: 'useYn', label: '사용 여부', type: 'yesno', required: true },
   { id: 'registered', label: '등록 일자', type: 'text', required: false, placeholder: 'YYYY-MM-DD' }
 ]
-
-// 데이터 생성 함수
-const generateData = (count: number): Route[] => {
-  const codes = ['RT01', 'RT02', 'RT03', 'RT04', 'RT05', 'RT06', 'RT07', 'RT08']
-  const fullNames = ['경부고속도로', '영동고속도로', '동해고속도로', '중앙고속도로', '호남고속도로', '경전고속도로', '서해안고속도로', '중부고속도로']
-  const shortNames = ['경부선', '영동선', '동해선', '중앙선', '호남선', '경전선', '서해안선', '중부선']
-  const descriptions = [
-    '서울-부산을 연결하는 고속도로입니다.',
-    '인천-강릉을 연결하는 고속도로입니다.',
-    '부산-포항을 연결하는 고속도로입니다.',
-    '대구-춘천을 연결하는 고속도로입니다.',
-    '광주-목포를 연결하는 고속도로입니다.',
-    '대전-여수를 연결하는 고속도로입니다.',
-    '울산-순천을 연결하는 고속도로입니다.',
-    '수원-안산을 연결하는 고속도로입니다.'
-  ]
-
-  const data: Route[] = []
-  
-  for (let i = 0; i < count && i < codes.length; i++) {
-    const registeredDate = new Date()
-    registeredDate.setDate(registeredDate.getDate() - Math.floor(Math.random() * 365))
-    const registered = registeredDate.toISOString().slice(0, 10)
-
-    data.push({
-      id: `RT-${String(i + 1).padStart(3, '0')}`,
-      code: codes[i],
-      fullName: fullNames[i],
-      shortName: shortNames[i],
-      description: descriptions[i],
-      sortOrder: i + 1,
-      useYn: Math.random() > 0.2 ? 'Y' : 'N',
-      registered
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화 (8개)
-rawData.value = generateData(8)
 </script>
 
 <style scoped>

@@ -89,51 +89,6 @@ const formFields: FormField[] = [
   { id: 'useYn', label: '사용 여부', type: 'yesno', required: true },
   { id: 'registered', label: '등록 일자', type: 'text', required: false, placeholder: 'YYYY-MM-DD' }
 ]
-
-// 데이터 생성 함수
-const generateData = (count: number): Branch[] => {
-  const codes = ['BR01', 'BR02', 'BR03', 'BR04', 'BR05', 'BR06', 'BR07', 'BR08', 'BR09', 'BR10', 'BR11', 'BR12']
-  const names = ['동부지사', '서부지사', '남부지사', '북부지사', '원주지사', '강릉지사', '천안지사', '대전지사', '전주지사', '광주지사', '부산지사', '대구지사']
-  const headquarters = ['수도권본부', '강원본부', '충청본부', '전라본부', '경상본부', '수도권본부', '충청본부', '충청본부', '전라본부', '전라본부', '경상본부', '경상본부']
-  const descriptions = [
-    '동부 지역 지사입니다.',
-    '서부 지역 지사입니다.',
-    '남부 지역 지사입니다.',
-    '북부 지역 지사입니다.',
-    '원주 지역 지사입니다.',
-    '강릉 지역 지사입니다.',
-    '천안 지역 지사입니다.',
-    '대전 지역 지사입니다.',
-    '전주 지역 지사입니다.',
-    '광주 지역 지사입니다.',
-    '부산 지역 지사입니다.',
-    '대구 지역 지사입니다.'
-  ]
-
-  const data: Branch[] = []
-  
-  for (let i = 0; i < count && i < names.length; i++) {
-    const registeredDate = new Date()
-    registeredDate.setDate(registeredDate.getDate() - Math.floor(Math.random() * 365))
-    const registered = registeredDate.toISOString().slice(0, 10)
-
-    data.push({
-      id: `BR-${String(i + 1).padStart(3, '0')}`,
-      code: codes[i],
-      name: names[i],
-      headquarters: headquarters[i],
-      description: descriptions[i],
-      sortOrder: i + 1,
-      useYn: Math.random() > 0.2 ? 'Y' : 'N',
-      registered
-    })
-  }
-  
-  return data
-}
-
-// 데이터 초기화 (12개)
-rawData.value = generateData(12)
 </script>
 
 <style scoped>

@@ -6,8 +6,8 @@
     :form-fields="formFields"
     modal-title="공통 코드"
     :checkbox-column-width="checkboxColumnWidth"
-    :id-column-width="idColumnWidth"
-    id-field="key"
+    :id-column-width="0"
+    id-field=""
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   />

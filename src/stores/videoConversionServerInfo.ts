@@ -58,112 +58,111 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
   },
 
   actions: {
-    // 헬퍼 인스턴스 생성 (변환 함수 없음)
+    // 백엔드 API 응답을 프론트엔드 형식으로 변환
+    transformFromAPI(data: any): VideoConversionServer {
+      return {
+        id: data.id,
+        trans_id: data.trans_id || '',
+        trans_name: data.trans_name || '',
+        trans_ip: data.trans_ip || '',
+        trans_port: data.trans_port || 0,
+        alive: data.alive || false,
+        alive_time: data.alive_time,
+        json_job: data.json_job,
+        json_yn: data.json_yn || false,
+        json_date: data.json_date,
+        version: data.version || '',
+        build_date: data.build_date,
+        start_date: data.start_date,
+        reg_date: data.reg_date,
+        created_at: data.created_at,
+        updated_at: data.updated_at
+      }
+    },
+
+    // 프론트엔드 데이터를 백엔드 API 형식으로 변환
+    transformToAPI(data: any): any {
+      return {
+        trans_id: data.trans_id,
+        trans_name: data.trans_name,
+        trans_ip: data.trans_ip,
+        trans_port: data.trans_port,
+        alive: data.alive,
+        alive_time: data.alive_time,
+        json_job: data.json_job,
+        json_yn: data.json_yn,
+        json_date: data.json_date,
+        version: data.version,
+        build_date: data.build_date,
+        start_date: data.start_date,
+        reg_date: data.reg_date
+      }
+    },
+
+    // 헬퍼 인스턴스 생성
     getHelper() {
       return new ApiStoreHelper<VideoConversionServer, VideoConversionServer>(
-        '/video-conversion-server-info', // 백엔드 API 엔드포인트
-        null, // 변환 함수 없음
-        null, // 변환 함수 없음
+        '/video-conversion-server-info',
+        this.transformFromAPI.bind(this),
+        this.transformToAPI.bind(this),
         this.$state as BaseStoreState<VideoConversionServer>
       )
     },
 
-    // 데이터 목록 가져오기
+    // PHP 테이블 정보
+    getPhpTableName() {
+      return 'MGMT_TRANS'
+    },
+
+    getPhpTableKey() {
+      return 'TRANS_ID'
+    },
+
+    // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchVideoConversionServers(forceRefresh = false) {
-      await this.getHelper().fetchAll(forceRefresh, 5 * 60 * 1000, '영상변환서버 정보 데이터')
+      await this.getHelper().fetchAll(
+        forceRefresh, 
+        5 * 60 * 1000, 
+        '영상변환서버 정보 데이터',
+        this.getPhpTableName()
+      )
     },
 
-    // 데이터 생성
+    // 데이터 생성 - PHP 백엔드 사용
     async createVideoConversionServer(data: VideoConversionServer) {
-      return await this.getHelper().create(data)
+      return await this.getHelper().create(
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 수정
+    // 데이터 수정 - PHP 백엔드 사용
     async updateVideoConversionServer(serverId: string, data: Partial<VideoConversionServer>) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const apiData = { ...data, trans_id: serverId }
-        
-        console.log('수정 요청 데이터:', apiData)
-        
-        const response = await api.put<VideoConversionServer>(
-          `/video-conversion-server-info/${serverId}`,
-          apiData
-        )
-        
-        const index = this.items.findIndex(item => item.trans_id === serverId)
-        if (index !== -1) {
-          this.items[index] = response.data
-        }
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 수정 완료:', response.data)
-        return response.data
-      } catch (error: any) {
-        console.error('데이터 수정 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      return await this.getHelper().update(
+        serverId,
+        data,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 데이터 삭제
+    // 데이터 삭제 - PHP 백엔드 사용
     async deleteVideoConversionServer(serverId: string) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        await api.delete(`/video-conversion-server-info/${serverId}`)
-        
-        this.items = this.items.filter(item => item.trans_id !== serverId)
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', serverId)
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().delete(
+        serverId,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
-    // 여러 개 삭제
+    // 여러 개 삭제 - PHP 백엔드 사용
     async deleteVideoConversionServers(serverIds: string[]) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
-
-      try {
-        this.isLoading = true
-        this.error = null
-        const deletePromises = serverIds.map(id => api.delete(`/video-conversion-server-info/${id}`))
-        
-        await Promise.all(deletePromises)
-        
-        this.items = this.items.filter(item => !serverIds.includes(item.trans_id))
-        this.lastFetched = Date.now()
-        
-        console.log('데이터 삭제 완료:', serverIds.length, '개')
-      } catch (error: any) {
-        console.error('데이터 삭제 실패:', error)
-        this.error = this.getHelper().parseBackendError(error)
-        throw error
-      } finally {
-        this.isLoading = false
-      }
+      await this.getHelper().deleteMany(
+        serverIds,
+        this.getPhpTableName(),
+        this.getPhpTableKey()
+      )
     },
 
     // 스토어 초기화

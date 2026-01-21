@@ -11,11 +11,17 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        // 개발 환경에서 API 프록시 설정 (선택사항)
+        // FastAPI 백엔드 프록시 설정
         '/api': {
           target: env.VITE_API_BASE_URL || 'http://localhost:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '/api')
+          rewrite: (path) => path.replace(/^\/api/, '')  // /api 제거 후 전달
+        },
+        // PHP 백엔드 프록시 설정 (기존 호환성 유지)
+        '/web': {
+          target: 'http://172.16.17.11:8080',  // PHP 서버 주소
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/web/, '')  // /web 제거 후 전달
         }
       }
     },
