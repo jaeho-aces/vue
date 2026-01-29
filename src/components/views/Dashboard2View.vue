@@ -143,16 +143,19 @@
                     <div class="node-label">미디어</div>
                   </div>
                 </div>
-                <!-- CDN 1 (교통센터, 가장 오른쪽) -->
-                <div 
-                  class="flow-node cdn-node" 
-                  ref="cdn1Ref"
-                  data-node="cdn1"
-                >
-                  <div class="node-content">
-                    <Globe class="cdn-icon" />
-                    <div class="node-label">CDN</div>
-                  </div>
+              </div>
+            </div>
+
+            <!-- 중앙: CDN 하나 (교통센터·김천본사 사이 겹침) -->
+            <div class="cdn-center-wrapper">
+              <div 
+                class="flow-node cdn-node cdn-node-center" 
+                ref="cdn1Ref"
+                data-node="cdn1"
+              >
+                <div class="node-content">
+                  <Globe class="cdn-icon" />
+                  <div class="node-label">CDN</div>
                 </div>
               </div>
             </div>
@@ -193,19 +196,8 @@
                   </div>
                 </div>
               </div>
-              <!-- 하단: CDN, 미디어, 변환/분배 서버, CCTV 그룹 (대칭 배치, CDN은 가장 왼쪽) -->
+              <!-- 하단: 변환/분배, 미디어, CCTV (CDN은 중앙 통합) -->
               <div class="bottom-flow">
-                <!-- CDN 2 (김천본사, 가장 왼쪽) -->
-                <div 
-                  class="flow-node cdn-node" 
-                  ref="cdn2Ref"
-                  data-node="cdn2"
-                >
-                  <div class="node-content">
-                    <Globe class="cdn-icon" />
-                    <div class="node-label">CDN</div>
-                  </div>
-                </div>
                 <!-- 변환/분배 서버 2 -->
                 <div 
                   class="flow-node trans-node" 
@@ -223,7 +215,7 @@
                       :show-ratio="true"
                       :height="180"
                     />
-                    <div class="node-label">변환/분배 서버</div>
+                    <div class="node-label">변환/분배</div>
                   </div>
                 </div>
                 <!-- 미디어 2 -->
@@ -259,8 +251,8 @@
                         <CircularGauge
                           :normal="cctv2_1Normal"
                           :error="cctv2_1Error"
-                          normal-color="#ff0096"
-                          error-color="#ff0066"
+                          normal-color="#10B981"
+                          error-color="#EF4444"
                           :show-ratio="true"
                         />
                         <div class="node-label">도로공사</div>
@@ -275,8 +267,8 @@
                         <CircularGauge
                           :normal="cctv2_2Normal"
                           :error="cctv2_2Error"
-                          normal-color="#ff0096"
-                          error-color="#ff0066"
+                          normal-color="#10B981"
+                          error-color="#EF4444"
                           :show-ratio="true"
                         />
                         <div class="node-label">수탁</div>
@@ -291,8 +283,8 @@
                         <CircularGauge
                           :normal="cctv2_3Normal"
                           :error="cctv2_3Error"
-                          normal-color="#ff0096"
-                          error-color="#ff0066"
+                          normal-color="#10B981"
+                          error-color="#EF4444"
                           :show-ratio="true"
                         />
                         <div class="node-label">비수탁</div>
@@ -366,10 +358,8 @@ const trans1Waiting = ref(2)
 const media1Normal = ref(12)
 const media1Error = ref(1)
 const media1Waiting = ref(3)
-const cdn1Normal = ref(15)
+const cdn1Normal = ref(30)
 const cdn1Error = ref(0)
-const cdn2Normal = ref(15)
-const cdn2Error = ref(0)
 const media2Normal = ref(10)
 const media2Error = ref(1)
 const media2Waiting = ref(2)
@@ -390,7 +380,6 @@ const cctv1_3Ref = ref<HTMLElement | null>(null)
 const trans1Ref = ref<HTMLElement | null>(null)
 const media1Ref = ref<HTMLElement | null>(null)
 const cdn1Ref = ref<HTMLElement | null>(null)
-const cdn2Ref = ref<HTMLElement | null>(null)
 const media2Ref = ref<HTMLElement | null>(null)
 const trans2Ref = ref<HTMLElement | null>(null)
 const cctv2_1Ref = ref<HTMLElement | null>(null)
@@ -477,7 +466,38 @@ const cctv2_3Ref = ref<HTMLElement | null>(null)
   justify-content: space-evenly;
   padding: 8px;
   gap: 12px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* CDN 중앙: 교통센터·김천본사 사이에 겹쳐 걸침 */
+.cdn-center-wrapper {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 144px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.cdn-center-wrapper .cdn-node-center {
+  pointer-events: auto;
+  min-width: 160px;
+  max-width: 200px;
+  padding: 20px 28px;
+}
+
+.cdn-center-wrapper .cdn-icon {
+  width: 64px;
+  height: 64px;
+}
+
+.cdn-center-wrapper .cdn-node-center .node-label {
+  font-size: 1.25rem;
 }
 
 .region-container {
@@ -552,11 +572,21 @@ const cctv2_3Ref = ref<HTMLElement | null>(null)
   flex-wrap: nowrap;
   flex: 1;
   min-height: 0;
-  padding: 0 16px;
+  padding: 0 12px;
 }
 
+/* 왼쪽 영역: 변환/분배·미디어를 바깥쪽(왼쪽)으로 */
 .region-left .bottom-flow {
   justify-content: space-between;
+  padding-right: 360px;
+  padding-left: 8px;
+}
+
+/* 오른쪽 영역: 변환/분배·미디어를 바깥쪽(오른쪽)으로 */
+.region-right .bottom-flow {
+  justify-content: space-between;
+  padding-left: 360px;
+  padding-right: 8px;
 }
 
 .region-left .bottom-flow .cctv-group {
@@ -565,10 +595,6 @@ const cctv2_3Ref = ref<HTMLElement | null>(null)
 
 .region-left .bottom-flow .flow-node:not(.cctv-group .flow-node) {
   flex-shrink: 0;
-}
-
-.region-right .bottom-flow {
-  justify-content: space-between;
 }
 
 .region-right .bottom-flow .cdn-node {
@@ -722,6 +748,7 @@ const cctv2_3Ref = ref<HTMLElement | null>(null)
   color: #e5e7eb;
   min-width: 120px;
   max-width: 150px;
+  padding: 12px 16px;
   box-shadow: 
     0 2px 4px rgba(0, 0, 0, 0.2),
     0 0 20px rgba(0, 240, 255, 0.1),

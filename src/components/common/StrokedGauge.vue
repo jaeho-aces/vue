@@ -71,6 +71,7 @@ const chartOptions = computed(() => {
       type: 'radialBar',
       height: props.height,
       background: 'transparent',
+      parentHeightOffset: 0,
       sparkline: { enabled: false },
       animations: {
         enabled: true,
@@ -104,19 +105,12 @@ const chartOptions = computed(() => {
           }
         },
         track: {
-          show: true,
-          background: 'rgba(15, 23, 42, 0.95)',
+          show: false,
+          background: 'transparent',
           strokeWidth: '98%',
-          opacity: 1,
+          opacity: 0,
           margin: 4,
-          dropShadow: {
-            enabled: true,
-            top: 4,
-            left: 0,
-            blur: 12,
-            opacity: 0.5,
-            color: '#000'
-          }
+          dropShadow: { enabled: false }
         },
         dataLabels: {
           name: { show: false },
@@ -124,7 +118,7 @@ const chartOptions = computed(() => {
             show: true,
             fontSize: '36px',
             fontWeight: 800,
-            offsetY: -8,
+            offsetY: -14,
             color: '#f8fafc',
             fontFamily: 'system-ui, sans-serif',
             formatter: function () {
@@ -175,11 +169,57 @@ const chartOptions = computed(() => {
   }
 })
 
+function clearChartRectBackground() {
+  if (!chartRef.value) return
+  const container = chartRef.value
+  const svg = container.querySelector('.apexcharts-svg')
+  const canvas = container.querySelector('.apexcharts-canvas')
+  if (svg) {
+    svg.style.background = 'transparent'
+    svg.style.backgroundColor = 'transparent'
+    const foreign = svg.querySelector('foreignObject')
+    if (foreign) {
+      foreign.setAttribute('width', '0')
+      foreign.setAttribute('height', '0')
+      foreign.setAttribute('x', '-9999')
+      foreign.setAttribute('y', '-9999')
+      foreign.setAttribute('visibility', 'hidden')
+      ;(foreign as HTMLElement).style.cssText =
+        'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;background:transparent!important'
+      const legend = foreign.querySelector('.apexcharts-legend')
+      if (legend) (legend as HTMLElement).style.setProperty('display', 'none', 'important')
+    }
+    container.querySelectorAll('.apexcharts-ycrosshairs, .apexcharts-ycrosshairs-hidden').forEach((el) => {
+      el.setAttribute('stroke', 'none')
+      ;(el as HTMLElement).style.display = 'none'
+    })
+    container.querySelectorAll('.apexcharts-tracks, .apexcharts-radialbar-track').forEach((el) => {
+      ;(el as HTMLElement).style.setProperty('display', 'none', 'important')
+    })
+    container.querySelectorAll('.apexcharts-tracks path, .apexcharts-radialbar-track path').forEach((el) => {
+      el.setAttribute('stroke', 'none')
+      el.setAttribute('visibility', 'hidden')
+      ;(el as HTMLElement).style.setProperty('display', 'none', 'important')
+    })
+  }
+  if (canvas) {
+    canvas.style.background = 'transparent'
+    canvas.style.backgroundColor = 'transparent'
+  }
+  container.querySelectorAll('rect').forEach((el) => {
+    if (el.closest('defs') || el.closest('clipPath')) return
+    el.setAttribute('fill', 'none')
+  })
+}
+
 onMounted(() => {
   nextTick(() => {
     if (chartRef.value) {
       chart = new ApexCharts(chartRef.value, chartOptions.value)
-      chart.render()
+      chart.render().then(() => {
+        nextTick(clearChartRectBackground)
+        setTimeout(clearChartRectBackground, 50)
+      })
     }
   })
 })
@@ -188,6 +228,8 @@ watch([() => props.normal, () => props.error, () => props.waiting], () => {
   if (chart) {
     chart.updateSeries([normalPercentage.value])
     chart.updateOptions(chartOptions.value, false, true)
+    nextTick(clearChartRectBackground)
+    setTimeout(clearChartRectBackground, 50)
   }
 })
 
@@ -223,7 +265,7 @@ onBeforeUnmount(() => {
 /* 외곽 링 (얇은 광택) */
 .gauge-outer-ring {
   position: absolute;
-  inset: -2px;
+  inset: 0;
   border-radius: 50%;
   background: linear-gradient(135deg,
     rgba(255, 255, 255, 0.12) 0%,
@@ -234,10 +276,10 @@ onBeforeUnmount(() => {
   z-index: 0;
 }
 
-/* 베젤: 메탈릭 */
+/* 베젤: 메탈릭 (테두리 작게) */
 .gauge-bezel {
   position: relative;
-  padding: 16px;
+  padding: 8px;
   border-radius: 50%;
   background: linear-gradient(155deg,
     #4a5160 0%,
@@ -268,7 +310,7 @@ onBeforeUnmount(() => {
 .gauge-bezel-inner {
   position: relative;
   border-radius: 50%;
-  padding: 12px;
+  padding: 6px;
   background: linear-gradient(165deg,
     rgba(18, 22, 32, 0.99) 0%,
     rgba(8, 11, 18, 0.99) 100%);
@@ -337,18 +379,38 @@ onBeforeUnmount(() => {
   z-index: 5;
   background: transparent;
   overflow: hidden;
+  /* 배경을 원형으로 클리핑 (가로·세로 중 짧은 쪽 기준 원) */
+  clip-path: circle(closest-side at 50% 50%);
 }
 
 /* 게이지 원 크기 확대 + 링 굵게 */
 .flashy-gauge .chart-container :deep(.apexcharts-inner) {
-  transform: scale(1.38);
+  transform: scale(1.48);
   transform-origin: center center;
 }
 
+/* 게이지 링 안쪽 원형(홀) 위로 이동 */
+.flashy-gauge .chart-container :deep(.apexcharts-radialbar-hollow) {
+  transform: translateY(-10px);
+}
+
+/* 사각형 배경 완전 제거 - ApexCharts 인라인 스타일 덮어씀 */
 .flashy-gauge :deep(.apexcharts-inner),
 .flashy-gauge :deep(.apexcharts-canvas),
 .flashy-gauge :deep(.apexcharts-svg) {
   background: transparent !important;
+  background-color: transparent !important;
+}
+.flashy-gauge .chart-container :deep(div) {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+.flashy-gauge :deep(.apexcharts-svg rect) {
+  fill: none !important;
+}
+.flashy-gauge .chart-container {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 .flashy-gauge :deep(.apexcharts-grid),
@@ -357,7 +419,14 @@ onBeforeUnmount(() => {
   display: none !important;
 }
 
-/* apexcharts-svg 내 legend용 foreignObject 숨김 */
+/* crosshairs 회색 가로선 숨김 (사각형/선 배경 제거) */
+.flashy-gauge :deep(.apexcharts-ycrosshairs),
+.flashy-gauge :deep(.apexcharts-ycrosshairs-hidden) {
+  display: none !important;
+  stroke: none !important;
+}
+
+/* apexcharts-svg 내 legend용 foreignObject 완전 숨김 (사각형/회색 그라데이션 제거) */
 .stroked-gauge-wrapper :deep(.apexcharts-svg foreignObject),
 .stroked-gauge-wrapper :deep(.apexcharts-svg > foreignObject),
 .flashy-gauge :deep(.apexcharts-svg foreignObject),
@@ -368,6 +437,11 @@ onBeforeUnmount(() => {
   width: 0 !important;
   height: 0 !important;
   pointer-events: none !important;
+  clip-path: inset(100%) !important;
+}
+.flashy-gauge :deep(.apexcharts-legend) {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 /* 게이지 바: 화려한 글로우 */
@@ -383,12 +457,12 @@ onBeforeUnmount(() => {
   letter-spacing: -0.02em;
 }
 
-/* 중앙 렌즈 (글래스 효과) - 차트 뒤에만 */
+/* 중앙 렌즈 (글래스 효과) - 차트 뒤에만, 위로 배치 */
 .gauge-center-lens {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -30%);
+  transform: translate(-50%, -40%);
   width: 55%;
   height: 35%;
   border-radius: 50%;
@@ -447,7 +521,7 @@ onBeforeUnmount(() => {
 }
 </style>
 
-<!-- apexcharts-svg 내 legend용 foreignObject (비스코프로 확실히 적용) -->
+<!-- legend foreignObject + crosshairs + 사각형 회색 그라데이션 배경 제거 (비스코프) -->
 <style>
 .stroked-gauge-wrapper .apexcharts-svg foreignObject,
 .stroked-gauge-wrapper .apexcharts-svg > foreignObject {
@@ -458,5 +532,41 @@ onBeforeUnmount(() => {
   height: 0 !important;
   overflow: hidden !important;
   pointer-events: none !important;
+  clip-path: inset(100%) !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+.stroked-gauge-wrapper .apexcharts-legend {
+  display: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+.stroked-gauge-wrapper .apexcharts-svg .apexcharts-ycrosshairs,
+.stroked-gauge-wrapper .apexcharts-svg .apexcharts-ycrosshairs-hidden {
+  display: none !important;
+  stroke: none !important;
+}
+.stroked-gauge-wrapper .apexcharts-svg rect {
+  fill: none !important;
+}
+/* 사각형 회색 그라데이션 배경(트랙/클립 영역) 완전 숨김 */
+.stroked-gauge-wrapper .apexcharts-radialbar-track,
+.stroked-gauge-wrapper .apexcharts-tracks,
+.stroked-gauge-wrapper .apexcharts-radialbar-track path,
+.stroked-gauge-wrapper .apexcharts-tracks .apexcharts-radialbar-area {
+  display: none !important;
+  opacity: 0 !important;
+  stroke: none !important;
+  fill: none !important;
+  visibility: hidden !important;
+}
+.stroked-gauge-wrapper .apexcharts-canvas,
+.stroked-gauge-wrapper .chart-container,
+.stroked-gauge-wrapper .apexcharts-svg {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
 }
 </style>
