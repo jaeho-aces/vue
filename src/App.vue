@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <DashboardPopupView v-if="route.path === '/dashboard-popup'" />
+    <Dashboard2View v-else-if="route.path === '/dashboard2-popup'" />
     <HomeView v-else-if="navigationStore.currentPage === 'home'" />
     <Layout v-else />
   </div>
@@ -11,6 +12,7 @@ import { useRoute } from 'vue-router'
 import { useNavigationStore } from './stores/navigation'
 import HomeView from './components/views/HomeView.vue'
 import DashboardPopupView from './components/views/DashboardPopupView.vue'
+import Dashboard2View from './components/views/Dashboard2View.vue'
 import Layout from './layout/Layout.vue'
 
 const route = useRoute()

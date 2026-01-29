@@ -53,6 +53,11 @@ export const useCommonCodeStore = defineStore('commonCode', {
       return state.items.filter(item => item.grp_code === codeGroup)
     },
     
+    // GRP_GBN으로 필터링 (본부: '1', 지사: '2', 노선: '4')
+    getByGrpGbn: (state) => (grpGbn: string) => {
+      return state.items.filter(item => String(item.grp_gbn) === String(grpGbn))
+    },
+    
     // 코드명 조회 헬퍼 (grp_gbn, grp_code, code로 code_name 반환)
     getCodeName: (state) => (grpGbn: string, grpCode: string, code: string) => {
       const item = state.items.find(

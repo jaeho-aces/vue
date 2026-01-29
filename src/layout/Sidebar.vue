@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { LayoutDashboard, Server, Settings, Activity, Users, Video, Monitor } from 'lucide-vue-next'
+import { LayoutDashboard, Server, Settings, Activity, Users, Video, Monitor, BarChart } from 'lucide-vue-next'
 
 interface Props {
   className?: string
@@ -38,11 +38,13 @@ const isHovered = ref(false)
 
 const navItems = [
   { id: 'dashboard', label: '대시보드', icon: Monitor },
+  { id: 'dashboard2', label: '대시보드2', icon: LayoutDashboard },
   { id: 'system-status', label: '시스템 현황', icon: LayoutDashboard },
   { id: 'server-status', label: '서버별 현황', icon: Activity },
   { id: 'cctv', label: '영상 보기', icon: Video },
   { id: 'device-manage', label: '장치 관리', icon: Server },
   { id: 'general-manage', label: '일반 관리', icon: Users },
+  { id: 'prometheus-sample', label: '샘플 페이지', icon: BarChart },
   { id: 'settings', label: '설정', icon: Settings }
 ]
 
@@ -55,6 +57,19 @@ const handleNavigate = (itemId: string) => {
     window.open(
       `${window.location.origin}/dashboard-popup`,
       'DashboardPopup',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+    )
+    return
+  }
+  
+  if (itemId === 'dashboard2') {
+    const width = 1920
+    const height = 1080
+    const left = (window.screen.width - width) / 2
+    const top = (window.screen.height - height) / 2
+    window.open(
+      `${window.location.origin}/dashboard2-popup`,
+      'Dashboard2Popup',
       `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
     )
     return

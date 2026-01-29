@@ -21,6 +21,7 @@ import ServerStatusView from '../components/views/ServerStatusView.vue'
 import VideoView from '../components/views/VideoView.vue'
 import ManagementView from '../components/views/ManagementView.vue'
 import DeviceManagementView from '../components/views/DeviceManagementView.vue'
+import PrometheusSampleView from '../components/views/PrometheusSampleView.vue'
 import '../assets/layout.css'
 
 const navigationStore = useNavigationStore()
@@ -41,7 +42,8 @@ const components = {
   'cctv': VideoView,
   'management': ManagementView,
   'device-manage': DeviceManagementView,
-  'general-manage': ManagementView
+  'general-manage': ManagementView,
+  'prometheus-sample': PrometheusSampleView
 }
 
 const currentComponent = computed(() => {

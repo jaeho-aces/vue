@@ -6,14 +6,18 @@
     :form-fields="formFields"
     modal-title="지사 정보"
     :checkbox-column-width="checkboxColumnWidth"
-    :id-column-width="idColumnWidth"
+    :id-column-width="0"
+    id-field=""
+    @update="handleDataUpdate"
+    @delete="handleDataDelete"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, defineComponent, h } from 'vue'
+import { computed, defineComponent, h } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
+import { useCommonCodeStore, type CommonCode } from '../../../stores/commonCode'
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -58,7 +62,6 @@ interface Branch {
 
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
-const idColumnWidth = 120
 const columnWidths = [120, 200, 200, 250, 100, 100, 120]
 
 // 컬럼 정의
@@ -75,12 +78,73 @@ const columns: TableColumn[] = [
 // 기본 표시 컬럼
 const defaultVisibleColumns = ['code', 'name', 'headquarters', 'description', 'sortOrder', 'useYn', 'registered']
 
-// 데이터 관리
-const rawData = ref<Branch[]>([])
+// 공통코드 스토어 사용
+const commonCodeStore = useCommonCodeStore()
+
+// GRP_GBN='2' (지사) 데이터를 Branch 형식으로 변환
+const rawData = computed<Branch[]>(() => {
+  const branchCodes = commonCodeStore.getByGrpGbn('2')
+  return branchCodes.map((item: CommonCode) => ({
+    id: `${item.grp_gbn}_${item.grp_code}_${item.code}`,
+    code: item.code || '',
+    name: item.code_name || '',
+    headquarters: item.grp_code || '', // GRP_CODE를 본부 코드로 사용
+    description: item.remarks || '',
+    sortOrder: item.ord || 0,
+    useYn: item.use_yn || 'N',
+    registered: item.reg_timestamp || ''
+  }))
+})
+
+// 데이터 업데이트 처리 (생성/수정)
+const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
+  try {
+    // Branch 데이터를 CommonCode 형식으로 변환
+    const commonCodeData: CommonCode = {
+      grp_gbn: '2', // 지사는 GRP_GBN = '2'
+      grp_code: data.headquarters || data.code || '',
+      code: data.code || '',
+      code_name: data.name || '',
+      short_code_name: data.name || '',
+      remarks: data.description || null,
+      ord: data.sortOrder || 0,
+      use_yn: data.useYn || 'Y',
+      reg_timestamp: data.registered || null
+    }
+    
+    if (isNew) {
+      // 신규 생성
+      await commonCodeStore.createCommonCode(commonCodeData)
+    } else {
+      // 수정 (복합 키 사용: GRP_GBN, GRP_CODE, CODE)
+      const originalId = data.id || ''
+      const [grpGbn, grpCode, code] = originalId.split('_')
+      
+      await commonCodeStore.updateCommonCode(grpGbn, grpCode, code, commonCodeData)
+    }
+    
+    // 스토어가 자동으로 업데이트되므로 별도 로드 불필요
+  } catch (error: any) {
+    console.error('데이터 저장 실패:', error)
+    const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
+    alert(errorMessage)
+  }
+}
+
+// 데이터 삭제 처리
+const handleDataDelete = async (ids: string[]) => {
+  try {
+    // 스토어의 deleteCommonCodes 메서드 사용 (복합 키 배열 전달)
+    await commonCodeStore.deleteCommonCodes(ids)
+  } catch (error: any) {
+    console.error('데이터 삭제 실패:', error)
+    const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
+    alert(errorMessage)
+  }
+}
 
 // 폼 필드 정의
 const formFields: FormField[] = [
-  { id: 'id', label: 'ID', type: 'text', required: true, placeholder: '예: BR-001' },
   { id: 'code', label: '코드', type: 'text', required: true, placeholder: '예: BR01' },
   { id: 'name', label: '지사 이름', type: 'text', required: true, placeholder: '예: 동부지사' },
   { id: 'headquarters', label: '소속 본부', type: 'text', required: true, placeholder: '예: 수도권본부' },

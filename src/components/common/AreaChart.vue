@@ -37,11 +37,15 @@ interface Props {
   data: Array<{ time: string; value: number }>
   color?: string
   label?: string
+  min?: number
+  max?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   color: '#3b82f6',
-  label: 'Value'
+  label: 'Value',
+  min: undefined,
+  max: undefined
 })
 
 const chartData = computed(() => ({
@@ -64,7 +68,7 @@ const chartData = computed(() => ({
   ]
 }))
 
-const chartOptions = {
+const chartOptions = computed(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -110,15 +114,17 @@ const chartOptions = {
       grid: {
         display: false
       },
-      min: (context: any) => {
+      min: props.min !== undefined ? props.min : (context: any) => {
         const values = context.chart.data.datasets[0].data
+        if (!values || values.length === 0) return 0
         const min = Math.min(...values)
-        return Math.max(0, min - 10)
+        return Math.max(0, min - (min * 0.1))
       },
-      max: (context: any) => {
+      max: props.max !== undefined ? props.max : (context: any) => {
         const values = context.chart.data.datasets[0].data
+        if (!values || values.length === 0) return 100
         const max = Math.max(...values)
-        return max + 10
+        return max + (max * 0.1)
       }
     }
   },
@@ -126,7 +132,7 @@ const chartOptions = {
     intersect: false,
     mode: 'index' as const
   }
-}
+}))
 </script>
 
 <style scoped>
