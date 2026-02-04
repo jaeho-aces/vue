@@ -7,17 +7,22 @@
     modal-title="본부 정보"
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="0"
-    id-field=""
+    id-field="id"
+    :hide-id-column="true"
+    preference-key="vms_headquarters_info"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   />
 </template>
 
 <script setup lang="ts">
-import { computed, watch, defineComponent, h } from 'vue'
+import { computed, defineComponent, h } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import { useCommonCodeStore, type CommonCode } from '../../../stores/commonCode'
+import { useAlertStore } from '../../../stores/alert'
+
+const alertStore = useAlertStore()
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -40,12 +45,13 @@ const YesNoCell = defineComponent({
     }
   },
   setup(props) {
+    const isYes = props.value === 'Y' || props.value === 1 || String(props.value).toUpperCase() === 'Y'
     return () => h('span', {
       class: [
         'inline-block px-2 py-0.5 rounded text-xs font-bold',
-        props.value === 'Y' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+        isYes ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
       ]
-    }, String(props.value || ''))
+    }, isYes ? 'Y' : 'N')
   }
 })
 
@@ -53,7 +59,7 @@ interface Headquarters {
   id: string
   code: string
   name: string
-  organization: string
+  shortName: string
   description: string
   sortOrder: number
   useYn: string
@@ -62,13 +68,13 @@ interface Headquarters {
 
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
-const columnWidths = [120, 200, 200, 250, 100, 100, 120]
+const columnWidths = [70, 200, 150, 250, 100, 100, 120]
 
-// 컬럼 정의
+// 컬럼 정의 (소속 기관 제거, 짧은 이름 표시)
 const columns: TableColumn[] = [
   { id: 'code', header: '코드', size: columnWidths[0], cellComponent: TextCell },
   { id: 'name', header: '본부 이름', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'organization', header: '소속 기관', size: columnWidths[2], cellComponent: TextCell },
+  { id: 'shortName', header: '짧은 이름', size: columnWidths[2], cellComponent: TextCell },
   { id: 'description', header: '설명', size: columnWidths[3], cellComponent: TextCell },
   { id: 'sortOrder', header: '표시 순서', size: columnWidths[4], cellComponent: TextCell },
   { id: 'useYn', header: '사용 여부', size: columnWidths[5], cellComponent: YesNoCell },
@@ -76,58 +82,60 @@ const columns: TableColumn[] = [
 ]
 
 // 기본 표시 컬럼
-const defaultVisibleColumns = ['code', 'name', 'organization', 'description', 'sortOrder', 'useYn', 'registered']
+const defaultVisibleColumns = ['code', 'name', 'shortName', 'description', 'sortOrder', 'useYn', 'registered']
 
 // 공통코드 스토어 사용
 const commonCodeStore = useCommonCodeStore()
 
-// GRP_GBN='1' (본부) 데이터를 Headquarters 형식으로 변환
+// GRP_GBN='1', GRP_CODE='0' (본부) 데이터를 Headquarters 형식으로 변환
 const rawData = computed<Headquarters[]>(() => {
   const headquartersCodes = commonCodeStore.getByGrpGbn('1')
-  return headquartersCodes.map((item: CommonCode) => ({
-    id: `${item.grp_gbn}_${item.grp_code}_${item.code}`,
-    code: item.code || '',
-    name: item.code_name || '',
-    organization: item.grp_code || '',
-    description: item.remarks || '',
-    sortOrder: item.ord || 0,
-    useYn: item.use_yn || 'N',
-    registered: item.reg_timestamp || ''
-  }))
+  return headquartersCodes
+    .filter((item: CommonCode) => String(item.grp_code || '') === '0')
+    .map((item: CommonCode) => ({
+      id: `${item.grp_gbn}_${item.grp_code}_${item.code}`,
+      code: item.code || '',
+      name: item.code_name || '',
+      shortName: item.short_code_name || '',
+      description: item.remarks || '',
+      sortOrder: item.ord || 0,
+      useYn: item.use_yn || 'N',
+      registered: item.reg_timestamp || ''
+    }))
 })
 
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
-    // Headquarters 데이터를 CommonCode 형식으로 변환
+    const now = new Date()
+    const regTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+    // Headquarters 데이터를 CommonCode 형식으로 변환 (그룹구분 1, 그룹코드 0 고정)
     const commonCodeData: CommonCode = {
-      grp_gbn: '1', // 본부는 GRP_GBN = '1'
-      grp_code: data.organization || data.code || '',
+      grp_gbn: '1',
+      grp_code: '0',
       code: data.code || '',
       code_name: data.name || '',
-      short_code_name: data.name || '',
+      short_code_name: data.shortName ?? data.name ?? '',
       remarks: data.description || null,
       ord: data.sortOrder || 0,
       use_yn: data.useYn || 'Y',
-      reg_timestamp: data.registered || null
+      reg_timestamp: isNew ? regTimestamp : (data.registered || null)
     }
     
     if (isNew) {
       // 신규 생성
       await commonCodeStore.createCommonCode(commonCodeData)
     } else {
-      // 수정 (복합 키 사용: GRP_GBN, GRP_CODE, CODE)
-      const originalId = data.id || ''
-      const [grpGbn, grpCode, code] = originalId.split('_')
-      
-      await commonCodeStore.updateCommonCode(grpGbn, grpCode, code, commonCodeData)
+      // 수정: 그룹구분 1, 그룹코드 0 고정 + 선택한 행의 코드로 조회·수정
+      const code = data.code ?? (data.id ? data.id.split('_').slice(2).join('_') : '')
+      await commonCodeStore.updateCommonCode('1', '0', code, commonCodeData)
     }
-    
+    alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
     // 스토어가 자동으로 업데이트되므로 별도 로드 불필요
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   }
 }
 
@@ -136,22 +144,23 @@ const handleDataDelete = async (ids: string[]) => {
   try {
     // 스토어의 deleteCommonCodes 메서드 사용 (복합 키 배열 전달)
     await commonCodeStore.deleteCommonCodes(ids)
+    alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
     console.error('데이터 삭제 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   }
 }
 
-// 폼 필드 정의
+// 폼 필드 정의 (등록 일자는 신규 시 현재시간 자동 설정, 수정 시 기존값 유지를 위해 hidden)
 const formFields: FormField[] = [
-  { id: 'code', label: '코드', type: 'text', required: true, placeholder: '예: HQ01' },
-  { id: 'name', label: '본부 이름', type: 'text', required: true, placeholder: '예: 수도권본부' },
-  { id: 'organization', label: '소속 기관', type: 'text', required: true, placeholder: '예: 한국도로공사' },
-  { id: 'description', label: '설명', type: 'textarea', required: false, rows: 3 },
-  { id: 'sortOrder', label: '표시 순서', type: 'number', required: true, placeholder: '예: 1' },
+  { id: 'code', label: '코드', type: 'text', required: true, placeholder: '예: HQ01', readonlyInEdit: true, maxLength: 5 },
+  { id: 'name', label: '본부 이름', type: 'text', required: true, placeholder: '예: 수도권본부', maxLength: 500 },
+  { id: 'shortName', label: '짧은 이름', type: 'text', required: false, placeholder: '예: 수도권', maxLength: 100 },
+  { id: 'description', label: '설명', type: 'textarea', required: false, rows: 3, maxLength: 500 },
+  { id: 'sortOrder', label: '표시 순서', type: 'number', required: true, placeholder: '예: 1', min: 0, max: 99, maxLength: 2 },
   { id: 'useYn', label: '사용 여부', type: 'yesno', required: true },
-  { id: 'registered', label: '등록 일자', type: 'text', required: false, placeholder: 'YYYY-MM-DD' }
+  { id: 'registered', label: '등록 일자', type: 'hidden' }
 ]
 </script>
 

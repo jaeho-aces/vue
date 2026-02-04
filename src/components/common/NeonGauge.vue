@@ -254,7 +254,7 @@ const chartOption = computed(() => {
       data: [{ value: errorEnd, name: 'Error' }],
       animation: true,
       animationDuration: 1500,
-      animationEasing: 'cubicOut'
+      animationEasing: 'cubicOut' as const
     })
   }
 
@@ -315,7 +315,7 @@ const chartOption = computed(() => {
     backgroundColor: 'transparent',
     animation: true,
     animationDuration: 2000,
-    animationEasing: 'cubicOut',
+    animationEasing: 'cubicOut' as const,
     series: series,
     graphic: [
       ...splitLineData,

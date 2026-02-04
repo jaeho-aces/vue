@@ -1,25 +1,21 @@
 import { defineStore } from 'pinia'
 import { ApiStoreHelper, BaseStoreState } from '../utils/apiStore'
-import { api } from '../services/api'
 
 // 백엔드 스키마와 동일한 타입 (변환 없이 사용)
 export interface VideoConversionServer {
-  id?: number
   trans_id: string
   trans_name: string
   trans_ip: string
   trans_port: number
-  alive: string | boolean
+  alive: string | null
   alive_time: string | null
-  json_job: string | null
-  json_yn: string | boolean
+  json_job: string
+  json_yn: string
   json_date: string | null
   version: string
   build_date: string | null
   start_date: string | null
   reg_date: string | null
-  created_at?: string
-  updated_at?: string
 }
 
 interface VideoConversionServerInfoState {
@@ -40,12 +36,12 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
   getters: {
     // 전체 개수
     totalCount: (state) => state.items.length,
-    
+
     // ID로 찾기
     getById: (state) => (id: string) => {
       return state.items.find(item => item.trans_id === id)
     },
-    
+
     // 검색
     search: (state) => (query: string) => {
       const lowerQuery = query.toLowerCase()
@@ -61,22 +57,19 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
     // 백엔드 API 응답을 프론트엔드 형식으로 변환
     transformFromAPI(data: any): VideoConversionServer {
       return {
-        id: data.id,
         trans_id: data.trans_id || '',
         trans_name: data.trans_name || '',
         trans_ip: data.trans_ip || '',
-        trans_port: data.trans_port || 0,
-        alive: data.alive || false,
-        alive_time: data.alive_time,
-        json_job: data.json_job,
-        json_yn: data.json_yn || false,
-        json_date: data.json_date,
+        trans_port: data.trans_port !== undefined ? Number(data.trans_port) : 0,
+        alive: data.alive || 'N',
+        alive_time: data.alive_time || null,
+        json_job: data.json_job || '',
+        json_yn: data.json_yn || 'N',
+        json_date: data.json_date || null,
         version: data.version || '',
-        build_date: data.build_date,
-        start_date: data.start_date,
-        reg_date: data.reg_date,
-        created_at: data.created_at,
-        updated_at: data.updated_at
+        build_date: data.build_date || null,
+        start_date: data.start_date || null,
+        reg_date: data.reg_date || null
       }
     },
 
@@ -121,8 +114,8 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
     // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchVideoConversionServers(forceRefresh = false) {
       await this.getHelper().fetchAll(
-        forceRefresh, 
-        5 * 60 * 1000, 
+        forceRefresh,
+        5 * 60 * 1000,
         '영상변환서버 정보 데이터',
         this.getPhpTableName()
       )

@@ -53,8 +53,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const total = computed(() => props.normal + props.error + (props.waiting || 0))
 const normalPercentage = computed(() => total.value > 0 ? (props.normal / total.value) * 100 : 0)
-const errorPercentage = computed(() => total.value > 0 ? (props.error / total.value) * 100 : 0)
-const waitingPercentage = computed(() => total.value > 0 ? ((props.waiting || 0) / total.value) * 100 : 0)
+// const errorPercentage = computed(() => total.value > 0 ? (props.error / total.value) * 100 : 0)
+// const waitingPercentage = computed(() => total.value > 0 ? ((props.waiting || 0) / total.value) * 100 : 0)
 
 const chartRef = ref<HTMLElement | null>(null)
 let chart: ApexCharts | null = null
@@ -175,8 +175,9 @@ function clearChartRectBackground() {
   const svg = container.querySelector('.apexcharts-svg')
   const canvas = container.querySelector('.apexcharts-canvas')
   if (svg) {
-    svg.style.background = 'transparent'
-    svg.style.backgroundColor = 'transparent'
+    const svgEl = svg as unknown as HTMLElement
+    svgEl.style.background = 'transparent'
+    svgEl.style.backgroundColor = 'transparent'
     const foreign = svg.querySelector('foreignObject')
     if (foreign) {
       foreign.setAttribute('width', '0')
@@ -184,10 +185,11 @@ function clearChartRectBackground() {
       foreign.setAttribute('x', '-9999')
       foreign.setAttribute('y', '-9999')
       foreign.setAttribute('visibility', 'hidden')
-      ;(foreign as HTMLElement).style.cssText =
+      const target = foreign as unknown as HTMLElement
+      target.style.cssText =
         'display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;overflow:hidden!important;background:transparent!important'
       const legend = foreign.querySelector('.apexcharts-legend')
-      if (legend) (legend as HTMLElement).style.setProperty('display', 'none', 'important')
+      if (legend) (legend as unknown as HTMLElement).style.setProperty('display', 'none', 'important')
     }
     container.querySelectorAll('.apexcharts-ycrosshairs, .apexcharts-ycrosshairs-hidden').forEach((el) => {
       el.setAttribute('stroke', 'none')
@@ -203,8 +205,9 @@ function clearChartRectBackground() {
     })
   }
   if (canvas) {
-    canvas.style.background = 'transparent'
-    canvas.style.backgroundColor = 'transparent'
+    const canvasEl = canvas as unknown as HTMLElement
+    canvasEl.style.background = 'transparent'
+    canvasEl.style.backgroundColor = 'transparent'
   }
   container.querySelectorAll('rect').forEach((el) => {
     if (el.closest('defs') || el.closest('clipPath')) return

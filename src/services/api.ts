@@ -9,27 +9,23 @@ import { useAuthStore } from '../stores/auth'
 
 // FastAPI 전용 Axios 인스턴스 생성 (baseURL 없음 - 프록시가 /api 경로를 처리)
 const fastApiClient: AxiosInstance = axios.create({
-  baseURL: '',  // 빈 문자열로 설정하여 전체 경로 사용
+  baseURL: '',
   timeout: apiConfig.timeout,
-  headers: apiConfig.headers
+  headers: apiConfig.headers,
+  withCredentials: true  // httpOnly 쿠키 전송/수신
 })
 
-// 공용 Axios 인스턴스 (일반 API 호출용)
+// 공용 Axios 인스턴스 (일반 API 호출용, 로그인/인증 API 포함)
 const apiClient: AxiosInstance = axios.create({
   baseURL: apiConfig.baseURL,
   timeout: apiConfig.timeout,
-  headers: apiConfig.headers
+  headers: apiConfig.headers,
+  withCredentials: true  // httpOnly 쿠키 전송/수신
 })
 
-// FastAPI 클라이언트 요청 인터셉터
+// FastAPI 클라이언트 요청 인터셉터 (인증은 httpOnly 쿠키로 자동 전송)
 fastApiClient.interceptors.request.use(
   (config) => {
-    // 인증 토큰 추가
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-    
     // 상세 요청 로깅 (개발 환경)
     if (import.meta.env.DEV) {
       const fullURL = `${config.baseURL || ''}${config.url || ''}`
@@ -99,15 +95,9 @@ fastApiClient.interceptors.response.use(
   }
 )
 
-// 공용 클라이언트 요청 인터셉터
+// 공용 클라이언트 요청 인터셉터 (인증은 httpOnly 쿠키로 자동 전송)
 apiClient.interceptors.request.use(
   (config) => {
-    // 인증 토큰 추가
-    const authStore = useAuthStore()
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-    
     // 상세 요청 로깅 (개발 환경)
     if (import.meta.env.DEV) {
       const fullURL = `${config.baseURL || ''}${config.url || ''}`
@@ -244,13 +234,17 @@ const fastApiApi = {
   },
 
   // FastAPI /rest-access-page를 사용한 REST API 호출
-  restAccess: <T = any>(tableName: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', data?: any, key?: string): Promise<AxiosResponse<T>> => {
+  // DELETE 시 key: 단일 키 문자열 또는 복합 키 객체(예: { GRP_GBN: 'C', GRP_CODE: 'test', CODE: 'test' })
+  restAccess: <T = any>(tableName: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', data?: any, key?: string | Record<string, string>): Promise<AxiosResponse<T>> => {
     const url = `/api/rest-access-page/${tableName}`
     
     if (method === 'GET') {
       return fastApiClient.get<T>(url, { params: data })
     } else if (method === 'DELETE') {
-      return fastApiClient.delete<T>(url, { params: { key: key || data } })
+      const params = (key != null && typeof key === 'object' && !Array.isArray(key))
+        ? key
+        : { key: key || data }
+      return fastApiClient.delete<T>(url, { params })
     } else {
       return fastApiClient[method.toLowerCase() as 'post' | 'put']<T>(url, data)
     }

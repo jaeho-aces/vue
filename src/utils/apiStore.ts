@@ -225,7 +225,8 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
   }
 
   // 데이터 삭제 (공통 - ID 기반) - FastAPI 백엔드용
-  async delete(id: string, tableName?: string, tableKey?: string) {
+  // id: 단일 키 문자열 또는 복합 키 객체(예: { GRP_GBN: 'C', GRP_CODE: 'test', CODE: 'test' })
+  async delete(id: string | Record<string, string>, tableName?: string, tableKey?: string) {
     if (this.state.isLoading) {
       console.warn('이미 처리 중인 요청이 있습니다.')
       return
@@ -236,15 +237,17 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
       this.state.error = null
       
       if (tableName) {
-        // FastAPI REST API 사용
+        // FastAPI REST API 사용 (복합 키는 객체로 전달 시 쿼리 파라미터로 각 키 전송)
         await api.fastapi.restAccess(tableName, 'DELETE', undefined, id)
       } else {
         // 기존 FastAPI 방식
-        await api.delete(`${this.endpoint}/${id}`)
+        await api.delete(`${this.endpoint}/${typeof id === 'string' ? id : (id as any).id}`)
       }
       
       const deleteKeyField = tableKey || 'id'
-      this.state.items = this.state.items.filter(item => (item as any)[deleteKeyField] !== id)
+      if (typeof id === 'string') {
+        this.state.items = this.state.items.filter(item => (item as any)[deleteKeyField] !== id)
+      }
       this.state.lastFetched = Date.now()
       
       console.log('데이터 삭제 완료:', id)

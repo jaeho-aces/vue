@@ -22,6 +22,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { LayoutDashboard, Server, Settings, Activity, Users, Video, Monitor, BarChart } from 'lucide-vue-next'
 
 interface Props {
@@ -34,42 +35,47 @@ const props = withDefaults(defineProps<Props>(), {
   className: ''
 })
 
+const router = useRouter()
 const isHovered = ref(false)
 
 const navItems = [
-  { id: 'dashboard', label: '대시보드', icon: Monitor },
-  { id: 'dashboard2', label: '대시보드2', icon: LayoutDashboard },
-  { id: 'system-status', label: '시스템 현황', icon: LayoutDashboard },
-  { id: 'server-status', label: '서버별 현황', icon: Activity },
-  { id: 'cctv', label: '영상 보기', icon: Video },
-  { id: 'device-manage', label: '장치 관리', icon: Server },
-  { id: 'general-manage', label: '일반 관리', icon: Users },
-  { id: 'prometheus-sample', label: '샘플 페이지', icon: BarChart },
-  { id: 'settings', label: '설정', icon: Settings }
+  { id: 'DashboardPopupView', label: '대시보드', icon: Monitor },
+  { id: 'Dashboard2View', label: '대시보드2', icon: LayoutDashboard },
+  { id: 'SystemStatusView', label: '시스템 현황', icon: LayoutDashboard },
+  { id: 'ServerStatusView', label: '서버별 현황', icon: Activity },
+  { id: 'VideoView', label: '영상 보기', icon: Video },
+  { id: 'DeviceManagementView', label: '장치 관리', icon: Server },
+  { id: 'ManagementView', label: '일반 관리', icon: Users },
+  { id: 'PrometheusSampleView', label: '샘플 페이지', icon: BarChart },
+  { id: 'Settings', label: '설정', icon: Settings }
 ]
 
 const handleNavigate = (itemId: string) => {
-  if (itemId === 'dashboard') {
+  if (itemId === 'DashboardPopupView') {
     const width = 2560
     const height = 1440
     const left = (window.screen.width - width) / 2
     const top = (window.screen.height - height) / 2
+    // Use router to resolve URL for hash mode compatibility
+    const routeData = router.resolve({ name: 'DashboardPopup' })
     window.open(
-      `${window.location.origin}/dashboard-popup`,
-      'DashboardPopup',
+      routeData.href,
+      'DashboardPopupView',
       `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
     )
     return
   }
   
-  if (itemId === 'dashboard2') {
+  if (itemId === 'Dashboard2View') {
     const width = 1920
     const height = 1080
     const left = (window.screen.width - width) / 2
     const top = (window.screen.height - height) / 2
+    // Use router to resolve URL for hash mode compatibility
+    const routeData = router.resolve({ name: 'Dashboard2Popup' })
     window.open(
-      `${window.location.origin}/dashboard2-popup`,
-      'Dashboard2Popup',
+      routeData.href,
+      'Dashboard2View',
       `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
     )
     return

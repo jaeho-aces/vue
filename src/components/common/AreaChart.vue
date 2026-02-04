@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
+import type { ChartOptions } from 'chart.js'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -132,7 +133,7 @@ const chartOptions = computed(() => ({
     intersect: false,
     mode: 'index' as const
   }
-}))
+}) as ChartOptions<'line'>)
 </script>
 
 <style scoped>

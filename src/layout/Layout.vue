@@ -1,31 +1,22 @@
-<template>
-  <div class="app-layout flex">
-    <Sidebar :active-item="navigationStore.currentPage" :on-navigate="handleNavigate" />
-    <div class="main-content flex-col">
-      <Header />
-      <main class="page-content">
-        <component :is="currentComponent" />
-      </main>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useNavigationStore } from '../stores/navigation'
 import { useCommonCodeStore } from '../stores/commonCode'
 import Header from './Header.vue'
 import Sidebar from './Sidebar.vue'
-import SystemStatusView from '../components/views/SystemStatusView.vue'
-import ServerStatusView from '../components/views/ServerStatusView.vue'
-import VideoView from '../components/views/VideoView.vue'
-import ManagementView from '../components/views/ManagementView.vue'
-import DeviceManagementView from '../components/views/DeviceManagementView.vue'
-import PrometheusSampleView from '../components/views/PrometheusSampleView.vue'
 import '../assets/layout.css'
 
+const route = useRoute()
+const router = useRouter()
 const navigationStore = useNavigationStore()
 const commonCodeStore = useCommonCodeStore()
+
+// URL 경로에 따라 navigationStore의 currentPage 동기화
+watch(() => route.path, (newPath) => {
+  const page = newPath.substring(1) || 'home'
+  navigationStore.setCurrentPage(page)
+}, { immediate: true })
 
 // 페이지 최초 로드 시 CommonCode 스토어 로드 (캐싱)
 onMounted(async () => {
@@ -36,24 +27,26 @@ onMounted(async () => {
   }
 })
 
-const components = {
-  'system-status': SystemStatusView,
-  'server-status': ServerStatusView,
-  'cctv': VideoView,
-  'management': ManagementView,
-  'device-manage': DeviceManagementView,
-  'general-manage': ManagementView,
-  'prometheus-sample': PrometheusSampleView
-}
-
-const currentComponent = computed(() => {
-  return components[navigationStore.currentPage as keyof typeof components] || SystemStatusView
-})
-
-const handleNavigate = (item: string) => {
-  navigationStore.setCurrentPage(item)
+const handleNavigate = (page: string) => {
+  if (page === 'home') {
+    router.push('/')
+  } else {
+    router.push(`/${page}`)
+  }
 }
 </script>
+
+<template>
+  <div class="app-layout flex">
+    <Sidebar :active-item="navigationStore.currentPage" :on-navigate="handleNavigate" />
+    <div class="main-content flex-col">
+      <Header />
+      <main class="page-content">
+        <slot />
+      </main>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .app-layout {

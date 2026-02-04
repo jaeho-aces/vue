@@ -1,27 +1,35 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { viteSingleFile } from 'vite-plugin-singlefile'
 
 export default defineConfig(({ mode }) => {
   // 환경 변수 로드
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   return {
-    plugins: [vue(), tailwindcss()],
+    plugins: [vue(), tailwindcss(), viteSingleFile()],
+    base: './',
     server: {
       port: 5173,
       proxy: {
-        // FastAPI 백엔드 프록시 설정
+        // FastAPI 백엔드 프록시 설정. Set-Cookie가 브라우저(프론트 호스트)에 저장되도록 보정.
         '/api': {
           target: env.VITE_API_BASE_URL || 'http://localhost:8000',
           changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '')  // /api 제거 후 전달
-        },
-        // PHP 백엔드 프록시 설정 (기존 호환성 유지)
-        '/web': {
-          target: 'http://172.16.17.11:8080',  // PHP 서버 주소
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/web/, '')  // /web 제거 후 전달
+          configure: (proxy) => {
+            proxy.on('proxyRes', (proxyRes) => {
+              const setCookie = proxyRes.headers['set-cookie']
+              if (setCookie) {
+                const rewritten = (Array.isArray(setCookie) ? setCookie : [setCookie]).map((c: string) =>
+                  c
+                    .replace(/;\s*Secure/gi, '')
+                    .replace(/;\s*Domain=[^;]+/gi, '')
+                )
+                proxyRes.headers['set-cookie'] = rewritten
+              }
+            })
+          }
         }
       }
     },

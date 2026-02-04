@@ -8,6 +8,7 @@
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
     id-field="trans_id"
+    preference-key="vms_video_conversion_server_info"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   >
@@ -31,9 +32,11 @@ import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import Button from '../../common/Button.vue'
 import { useVideoConversionServerInfoStore, type VideoConversionServer } from '../../../stores/videoConversionServerInfo'
+import { useAlertStore } from '../../../stores/alert'
 
 // Pinia 스토어 사용
 const videoConversionServerStore = useVideoConversionServerInfoStore()
+const alertStore = useAlertStore()
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // 셀 컴포넌트들
@@ -99,26 +102,28 @@ const YesNoCell = defineComponent({
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
 const idColumnWidth = 150
-const columnWidths = [200, 180, 150, 300, 150, 150, 150, 220, 180, 250]
 
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
-  { id: 'trans_name', header: '서버 이름', size: columnWidths[0], cellComponent: TextCell },
-  { id: 'trans_ip', header: '서버 IP 주소', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'trans_port', header: '통신 포트 번호', size: columnWidths[2], cellComponent: TextCell },
-  { id: 'alive', header: '동작 여부', size: columnWidths[5], cellComponent: StatusCell },
-  { id: 'alive_time', header: '마지막 동작 확인 시간', size: columnWidths[7], cellComponent: TextCell },
-  { id: 'json_job', header: 'JSON 처리', size: columnWidths[3], cellComponent: TextCell },
-  { id: 'json_yn', header: 'JSON 사용 여부', size: columnWidths[4], cellComponent: YesNoCell },
-  { id: 'json_date', header: '마지막 명령 처리 일자', size: columnWidths[6], cellComponent: TextCell },
-  { id: 'version', header: '서버 버전', size: columnWidths[4], cellComponent: TextCell },
-  { id: 'build_date', header: '실행 파일 생성 일자', size: columnWidths[6], cellComponent: TextCell },
-  { id: 'start_date', header: '서버 실행 시작 시간', size: columnWidths[8], cellComponent: TextCell },
-  { id: 'reg_date', header: '등록 일자', size: columnWidths[9], cellComponent: TextCell }
+  { id: 'trans_id', header: '서버 구분자', size: 120, cellComponent: TextCell },
+  { id: 'trans_name', header: '서버 이름', size: 150, cellComponent: TextCell },
+  { id: 'trans_ip', header: '서버 IP 주소', size: 130, cellComponent: TextCell },
+  { id: 'trans_port', header: '통신 포트 번호', size: 120, cellComponent: TextCell },
+  { id: 'alive', header: '동작 여부', size: 100, cellComponent: StatusCell },
+  { id: 'alive_time', header: '마지막 동작 시간', size: 180, cellComponent: TextCell },
+  { id: 'json_job', header: 'JSON 처리', size: 120, cellComponent: TextCell },
+  { id: 'json_yn', header: 'JSON 사용 여부', size: 100, cellComponent: YesNoCell },
+  { id: 'json_date', header: '마지막 명령 일자', size: 160, cellComponent: TextCell },
+  { id: 'version', header: '서버 버전', size: 120, cellComponent: TextCell },
+  { id: 'build_date', header: '파일 생성 일자', size: 160, cellComponent: TextCell },
+  { id: 'start_date', header: '서버 시작 시간', size: 160, cellComponent: TextCell },
+  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: TextCell }
 ]
 
 // 기본 표시 컬럼
-const defaultVisibleColumns = ['trans_name', 'trans_ip', 'trans_port', 'alive', 'alive_time', 'version', 'reg_date']
+const defaultVisibleColumns = [
+  'trans_id', 'trans_name', 'trans_ip', 'alive', 'version', 'reg_date'
+]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
 const rawData = computed(() => {
@@ -131,28 +136,19 @@ const rawData = computed(() => {
 
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
 const formFields: FormField[] = [
-  { id: 'trans_id', label: '구분자', type: 'text', required: true, placeholder: '예: TCS-001' },
-  { id: 'trans_name', label: '서버 이름', type: 'text', required: true },
-  { id: 'trans_ip', label: '서버 IP 주소', type: 'text', required: true, placeholder: '예: 192.168.1.101' },
-  { id: 'trans_port', label: '통신 포트 번호', type: 'number', required: true, placeholder: '예: 8080' },
-  { 
-    id: 'alive', 
-    label: '동작 여부', 
-    type: 'select', 
-    required: true,
-    options: [
-      { value: 'Y', label: '정상' },
-      { value: 'N', label: '비활성' }
-    ]
-  },
-  { id: 'alive_time', label: '마지막 동작 확인 시간', type: 'text', placeholder: 'YYYY-MM-DD HH:mm:ss' },
-  { id: 'json_job', label: 'JSON 처리', type: 'text', required: false },
-  { id: 'json_yn', label: 'JSON 사용 여부', type: 'yesno', required: true },
-  { id: 'json_date', label: '마지막 명령 처리 일자', type: 'text', placeholder: 'YYYY-MM-DD' },
-  { id: 'version', label: '서버 버전', type: 'text', required: true },
-  { id: 'build_date', label: '실행 파일 생성 일자', type: 'text', placeholder: 'YYYY-MM-DD' },
-  { id: 'start_date', label: '서버 실행 시작 시간', type: 'text', placeholder: 'YYYY-MM-DD HH:mm:ss' },
-  { id: 'reg_date', label: '등록 일자', type: 'text', placeholder: 'YYYY-MM-DD' }
+  { id: 'trans_id', label: '서버 구분자', type: 'text', required: true, placeholder: '예: TR0000XXXX' },
+  { id: 'trans_name', label: '서버 이름', type: 'text', required: true, placeholder: '한글 / 영문' },
+  { id: 'trans_ip', label: '서버 IP 주소', type: 'text', required: true, placeholder: 'A.B.C.D (0~255)' },
+  { id: 'trans_port', label: '통신 포트 번호', type: 'number', required: true, placeholder: '0~65535' },
+  { id: 'alive', label: '동작 여부', type: 'text', placeholder: 'Y / N' },
+  { id: 'alive_time', label: '마지막 동작 확인 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'json_job', label: 'JSON 처리', type: 'text', required: true, placeholder: '한글 / 영문' },
+  { id: 'json_yn', label: 'JSON 사용 여부', type: 'text', required: true, placeholder: 'Y / N' },
+  { id: 'json_date', label: '마지막 명령 처리 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'version', label: '서버 버전', type: 'text', placeholder: '한글 / 영문' },
+  { id: 'build_date', label: '실행 파일 생성 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'start_date', label: '서버 실행 시작 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'reg_date', label: '등록 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' }
 ]
 
 // 데이터 업데이트 처리 (생성/수정)
@@ -168,10 +164,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     } else {
       await videoConversionServerStore.updateVideoConversionServer(data.trans_id, data)
     }
+    alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
     const errorMessage = videoConversionServerStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }
@@ -186,10 +183,11 @@ const handleDataDelete = async (ids: string[]) => {
   try {
     isSubmitting.value = true
     await videoConversionServerStore.deleteVideoConversionServers(ids)
+    alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
     console.error('데이터 삭제 실패:', error)
     const errorMessage = videoConversionServerStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }

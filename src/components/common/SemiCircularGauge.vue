@@ -156,7 +156,7 @@ const chartOption = computed(() => {
       }],
       animation: true,
       animationDuration: 1000,
-      animationEasing: 'cubicOut'
+      animationEasing: 'cubicOut' as const
     })
   }
 
@@ -217,7 +217,7 @@ const chartOption = computed(() => {
       }],
       animation: true,
       animationDuration: 1000,
-      animationEasing: 'cubicOut'
+      animationEasing: 'cubicOut' as const
     })
   }
 
@@ -278,7 +278,7 @@ const chartOption = computed(() => {
       }],
       animation: true,
       animationDuration: 1000,
-      animationEasing: 'cubicOut'
+      animationEasing: 'cubicOut' as const
     })
   }
 
@@ -286,7 +286,7 @@ const chartOption = computed(() => {
     backgroundColor: 'transparent',
     animation: true,
     animationDuration: 1500,
-    animationEasing: 'cubicOut',
+    animationEasing: 'cubicOut' as const,
     series: series,
     title: [
       {

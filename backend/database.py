@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from fastapi import Request, HTTPException
 from pydantic import BaseModel
@@ -10,14 +11,13 @@ from tables import (
     get_table_key as get_table_key_from_schema,
     is_table_exists as is_table_exists_in_schema
 )
+from auth import process_mgmt_user_password_body
 
-load_dotenv()
+# backend/.env 를 항상 로드 (실행 경로가 프로젝트 루트여도 동작)
+load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 # PostgreSQL 연결 설정
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:acest@172.16.17.11:5432/postgres"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # 데이터베이스 연결 풀
 db_pool: Optional[AsyncConnectionPool] = None
@@ -27,6 +27,10 @@ def init_db_pool():
     """데이터베이스 연결 풀을 초기화합니다."""
     global db_pool
     if db_pool is None:
+        if not DATABASE_URL:
+            raise RuntimeError(
+                "DATABASE_URL가 설정되지 않았습니다. backend/.env 파일에 DATABASE_URL=postgresql://... 를 넣어 주세요."
+            )
         db_pool = AsyncConnectionPool(DATABASE_URL, min_size=1, max_size=10)
     return db_pool
 
@@ -48,6 +52,13 @@ def var_name(val: str) -> str:
     return f'"{val.lower()}"'
 
 
+def var_name_preserve_case(val: str) -> str:
+    """컬럼명 대소문자 유지 (API body 키가 DB 컬럼명과 일치할 때 사용)"""
+    if val == "*" or val == '*':
+        return "*"
+    return f'"{val}"'
+
+
 def var_value(val: Any) -> str:
     """값을 PostgreSQL 형식으로 변환"""
     if val is None or val == '':
@@ -63,8 +74,7 @@ def var_value(val: Any) -> str:
 
 
 def format_table_name(table: str) -> str:
-    """테이블명을 PostgreSQL 형식으로 변환"""
-    # PostgreSQL은 기본적으로 소문자로 변환하므로 소문자로 변환
+    """테이블명을 PostgreSQL 따옴표 식별자로 변환 (DB에 소문자로 저장된 경우)"""
     return f'"{table.lower()}"'
 
 # 하위 호환성을 위한 별칭
@@ -88,8 +98,9 @@ def get_field_list(layout: List[Dict]) -> str:
     return ", ".join(fields) if fields else "*"
 
 
-def get_conditions(table: str, vars: Dict, count: int = 1) -> str:
+def get_conditions(table: str, vars: Dict, count: int = 1, preserve_case: bool = False) -> str:
     """WHERE 절 생성"""
+    name_fn = var_name_preserve_case if preserve_case else var_name
     conditions = []
     i = 0
     for key, val in vars.items():
@@ -97,7 +108,7 @@ def get_conditions(table: str, vars: Dict, count: int = 1) -> str:
             continue
         if i >= count:
             break
-        conditions.append(f'{var_name(key)} = {var_value(val)}')
+        conditions.append(f'{name_fn(key)} = {var_value(val)}')
         i += 1
     return " AND ".join(conditions) if conditions else "1=1"
 
@@ -123,12 +134,31 @@ def get_quoted_order(order: str) -> str:
     return ", ".join(parts)
 
 
-def get_cs_list(vars: Dict) -> str:
+def get_cs_list(vars: Dict, preserve_case: bool = False) -> str:
     """UPDATE SET 절 생성"""
+    name_fn = var_name_preserve_case if preserve_case else var_name
     sets = []
     for key, val in vars.items():
-        sets.append(f'{var_name(key)} = {var_value(val)}')
+        sets.append(f'{name_fn(key)} = {var_value(val)}')
     return ", ".join(sets)
+
+
+# DB에 저장된 실제 컬럼명 목록 조회 (대소문자 그대로)
+async def get_actual_column_names(table_name: str, schema: str = "public") -> List[str]:
+    """information_schema에서 해당 테이블의 컬럼명 목록을 반환"""
+    try:
+        async with db_pool.connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute("""
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = %s AND LOWER(table_name) = LOWER(%s)
+                    ORDER BY ordinal_position
+                """, (schema, table_name))
+                rows = await cur.fetchall()
+                return [row[0] for row in rows] if rows else []
+    except Exception:
+        return []
 
 
 # DB에서 테이블 존재 여부 확인
@@ -207,8 +237,9 @@ class GetDbArrayRequest(BaseModel):
 
 def register_database_routes(app):
     """데이터베이스 관련 엔드포인트를 FastAPI 앱에 등록합니다."""
-    
-    # get-db-array.php 기능
+
+    # get-db-array.php 기능 (프론트 프록시가 /api 그대로 전달하므로 /api 경로도 등록)
+    @app.post("/api/get-db-array")
     @app.post("/get-db-array")
     async def get_db_array(request: GetDbArrayRequest):
         """
@@ -298,7 +329,8 @@ def register_database_routes(app):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
-    # rest-access-page.php 기능
+    # rest-access-page.php 기능 (프론트가 /api/rest-access-page 호출 시 대응)
+    @app.get("/api/rest-access-page/{table_name}")
     @app.get("/rest-access-page/{table_name}")
     async def rest_access_get(table_name: str, request: Request):
         """
@@ -340,6 +372,7 @@ def register_database_routes(app):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.post("/api/rest-access-page/{table_name}")
     @app.post("/rest-access-page/{table_name}")
     async def rest_access_post(table_name: str, request: Request):
         """
@@ -352,12 +385,18 @@ def register_database_routes(app):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
             
             body = await request.json()
-            
-            # INSERT 쿼리 생성
+            process_mgmt_user_password_body(body, table_name)
+
+            # DB 실제 컬럼명 사용 (PostgreSQL은 따옴표 없이 생성 시 소문자)
+            actual_columns = await get_actual_column_names(table_name)
+            actual_by_lower = {c.lower(): c for c in actual_columns} if actual_columns else {}
+
             keys = []
             values = []
             for key, val in body.items():
-                keys.append(var_name(key))
+                key_lower = str(key).lower()
+                actual = actual_by_lower.get(key_lower, key_lower)
+                keys.append(var_name(actual))
                 values.append(var_value(val))
             
             sql = f'INSERT INTO {format_table_name(table_name)} ({", ".join(keys)}) VALUES ({", ".join(values)}) RETURNING *'
@@ -379,6 +418,7 @@ def register_database_routes(app):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.put("/api/rest-access-page/{table_name}")
     @app.put("/rest-access-page/{table_name}")
     async def rest_access_put(table_name: str, request: Request):
         """
@@ -391,31 +431,60 @@ def register_database_routes(app):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
             
             body = await request.json()
+            process_mgmt_user_password_body(body, table_name)
+
             table_key = await get_table_key(table_name)
+            # MGMT_CODE: 수정 시 그룹구분+코드 2개만 키로 사용 (그룹 코드 수정 가능)
+            if table_name and str(table_name).upper() == "MGMT_CODE":
+                table_key = ["GRP_GBN", "CODE"]
+            # body 키를 소문자로 정규화하여 조회 (클라이언트가 grp_code 등 소문자로 보낼 수 있음)
+            body_lower = {str(k).lower(): k for k in body.keys()}
             
-            # 키 필드 추출
+            # 키 필드 추출 (대소문자 무시)
             if isinstance(table_key, list):
                 # 복합 키
                 keys = {}
                 for key_field in table_key:
-                    if key_field not in body:
+                    key_lower = key_field.lower()
+                    if key_lower not in body_lower:
                         raise HTTPException(status_code=400, detail=f"Key field {key_field} not found")
-                    keys[key_field] = body[key_field]
+                    actual_key = body_lower[key_lower]
+                    keys[key_field] = body[actual_key]
             else:
                 # 단일 키
-                if table_key not in body:
+                key_lower = table_key.lower()
+                if key_lower not in body_lower:
                     raise HTTPException(status_code=400, detail=f"Key field {table_key} not found")
-                keys = {table_key: body[table_key]}
+                actual_key = body_lower[key_lower]
+                keys = {table_key: body[actual_key]}
             
-            # 업데이트할 필드 추출 (키 필드 제외)
-            update_fields = {k: v for k, v in body.items() if k not in keys}
+            # 업데이트할 필드 추출 (키 필드 제외, 키는 대소문자 무시로 비교)
+            key_lowers = {k.lower() for k in keys.keys()}
+            update_fields = {k: v for k, v in body.items() if k.lower() not in key_lowers}
             
             if not update_fields:
                 raise HTTPException(status_code=400, detail="No fields to update")
             
-            # UPDATE 쿼리 생성
-            set_clause = get_cs_list(update_fields)
-            where_clause = get_conditions(table_name, keys, len(keys))
+            # DB에 저장된 실제 컬럼명 사용 (소문자 테이블은 컬럼도 소문자일 수 있음)
+            actual_columns = await get_actual_column_names(table_name)
+            actual_by_lower = {c.lower(): c for c in actual_columns} if actual_columns else {}
+            
+            def quoted_actual(key: str) -> str:
+                # 조회된 컬럼이 없으면 소문자 사용(PostgreSQL 기본). 따옴표 없이 생성된 컬럼은 소문자
+                actual = actual_by_lower.get(key.lower(), key.lower())
+                return f'"{actual.lower()}"'
+            
+            set_parts = [f'{quoted_actual(k)} = {var_value(v)}' for k, v in update_fields.items()]
+            # MGMT_CODE 2키: CHAR/공백 패딩 시 매칭되도록 TRIM 비교
+            if table_name and str(table_name).upper() == "MGMT_CODE":
+                where_parts = [
+                    f"TRIM(CAST({quoted_actual(k)} AS TEXT)) = TRIM(CAST({var_value(str(v).strip() if v is not None else '')} AS TEXT))"
+                    for k, v in keys.items()
+                ]
+            else:
+                where_parts = [f'{quoted_actual(k)} = {var_value(v)}' for k, v in keys.items()]
+            set_clause = ", ".join(set_parts)
+            where_clause = " AND ".join(where_parts)
             sql = f'UPDATE {format_table_name(table_name)} SET {set_clause} WHERE {where_clause} RETURNING *'
             
             # 쿼리 실행
@@ -438,6 +507,7 @@ def register_database_routes(app):
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.delete("/api/rest-access-page/{table_name}")
     @app.delete("/rest-access-page/{table_name}")
     async def rest_access_delete(table_name: str, request: Request):
         """
@@ -450,24 +520,51 @@ def register_database_routes(app):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
             
             table_key = await get_table_key(table_name)
+            # MGMT_CODE: 삭제 시 그룹구분+코드 2개만 키로 사용
+            if table_name and str(table_name).upper() == "MGMT_CODE":
+                table_key = ["GRP_GBN", "CODE"]
             query_params = dict(request.query_params)
+            # 쿼리 키 대소문자 무시 조회용 (일부 프록시/서버가 키를 정규화할 수 있음)
+            query_lower = {k.lower(): k for k in query_params.keys()}
             
             # 키 파라미터 처리
             if isinstance(table_key, list):
-                # 복합 키
+                # 복합 키: GRP_GBN=...&CODE=... 형식 또는 key=val1,val2 형식
                 keys = {}
-                for key_field in table_key:
-                    if key_field not in query_params:
-                        raise HTTPException(status_code=400, detail=f"Key field {key_field} not found in query parameters")
-                    keys[key_field] = query_params[key_field]
+                if all(qk in query_lower for qk in [k.lower() for k in table_key]):
+                    for key_field in table_key:
+                        actual = query_lower.get(key_field.lower())
+                        if actual is not None:
+                            keys[key_field] = query_params[actual]
+                elif all(k in query_params for k in table_key):
+                    for key_field in table_key:
+                        keys[key_field] = query_params[key_field]
+                else:
+                    key_param_name = query_lower.get("key")
+                    key_val = query_params[key_param_name] if key_param_name else None
+                    if key_val is not None:
+                        parts = [p.strip() for p in key_val.split(",")]
+                        if len(parts) != len(table_key):
+                            raise HTTPException(status_code=400, detail=f"Key must have {len(table_key)} comma-separated values")
+                        for i, key_field in enumerate(table_key):
+                            keys[key_field] = parts[i]
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Key field {table_key[0]} not found in query parameters")
             else:
                 # 단일 키
-                if 'key' not in query_params:
+                key_param_name = query_lower.get("key")
+                if key_param_name is None:
                     raise HTTPException(status_code=400, detail="Key parameter not found")
-                keys = {table_key: query_params['key']}
+                keys = {table_key: query_params[key_param_name]}
             
-            # DELETE 쿼리 생성
-            where_clause = get_conditions(table_name, keys, len(keys))
+            # DELETE 쿼리 생성 (실제 컬럼명 사용, PostgreSQL은 따옴표 없이 생성된 컬럼은 소문자)
+            actual_columns = await get_actual_column_names(table_name)
+            actual_by_lower = {c.lower(): c for c in actual_columns} if actual_columns else {}
+            def quoted_actual(key: str) -> str:
+                actual = actual_by_lower.get(key.lower(), key.lower())
+                return f'"{actual.lower()}"'
+            where_parts = [f'{quoted_actual(k)} = {var_value(v)}' for k, v in keys.items()]
+            where_clause = " AND ".join(where_parts)
             sql = f'DELETE FROM {format_table_name(table_name)} WHERE {where_clause} RETURNING *'
             
             # 쿼리 실행

@@ -130,7 +130,7 @@
             :class="{ 'metric-error': queryResult.status === 'error' }"
           >
             <div class="metric-header">
-              <h3 class="metric-name">{{ getMetricDisplayName(queryName) }}</h3>
+              <h3 class="metric-name">{{ getMetricDisplayName(String(queryName)) }}</h3>
               <span 
                 :class="['metric-status', queryResult.status === 'success' ? 'status-success' : 'status-error']"
               >
@@ -138,7 +138,7 @@
               </span>
             </div>
             <div class="metric-description">
-              {{ getMetricDescription(queryName) }}
+              {{ getMetricDescription(String(queryName)) }}
             </div>
             
             <!-- 성공한 쿼리 결과 -->
@@ -162,7 +162,7 @@
                   <div class="result-value">
                     <span class="value-label">값:</span>
                     <span class="value-number">{{ formatValue(result.value?.[1]) }}</span>
-                    <span class="value-unit">{{ getValueUnit(queryName, result.value?.[1]) }}</span>
+                    <span class="value-unit">{{ getValueUnit(String(queryName), result.value?.[1]) }}</span>
                   </div>
                   <div class="result-timestamp" v-if="result.value?.[0]">
                     타임스탬프: {{ formatTimestamp(result.value[0]) }}
@@ -499,7 +499,7 @@ const formatTimestamp = (timestamp: number): string => {
     minute: '2-digit',
     second: '2-digit',
     fractionalSecondDigits: 3
-  })
+  } as any)
 }
 
 const connect = () => {

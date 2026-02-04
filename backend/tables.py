@@ -55,6 +55,22 @@ TABLES: Dict[str, TableSchema] = {
             TableField("WEBLEVEL", "numeric(1)", "사용 권한"),
         ]
     ),
+    # 사용자 계정 탭 사용 DB 테이블 (정의서 기준)
+    "MGMT_USER": TableSchema(
+        table_name="MGMT_USER",
+        key="USER_ID",
+        comment="사용자 계정 (접근 페이지)",
+        fields=[
+            TableField("USER_ID", "varchar(64)", "사용자 ID (PK, NOT NULL)"),
+            TableField("USER_NAME", "varchar(100)", "사용자 이름 (NOT NULL)"),
+            TableField("PASSWORD", "varchar(256)", "사용자 암호 (NOT NULL, SHA256 해시)"),
+            TableField("EMAIL", "varchar(100)", "email 주소"),
+            TableField("PHONE", "varchar(64)", "전화 번호"),
+            TableField("MEMO", "varchar(100)", "메모"),
+            TableField("CAN_SEND_SMS", "smallint", "SMS 전송 허용 여부 (0/1)"),
+            TableField("GROUP_NAME", "varchar(5)", "그룹 이름 (admin/user)"),
+        ]
+    ),
     "MGMT_CODE": TableSchema(
         table_name="MGMT_CODE",
         key=["GRP_GBN", "GRP_CODE", "CODE"],

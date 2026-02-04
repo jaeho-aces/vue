@@ -8,6 +8,7 @@
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
     id-field="version_id"
+    preference-key="vms_version_management"
     :hide-edit-button="true"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
@@ -19,9 +20,11 @@ import { computed, onMounted, defineComponent, h } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import { useVersionMgtStore, type Version } from '../../../stores/versionMgt'
+import { useAlertStore } from '../../../stores/alert'
 
 // Pinia 스토어 사용
 const versionStore = useVersionMgtStore()
+const alertStore = useAlertStore()
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -76,10 +79,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       // 수정
       await versionStore.updateVersion(data.version_id, data)
     }
+    alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
     const errorMessage = versionStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   }
 }
 
@@ -87,10 +91,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
 const handleDataDelete = async (ids: string[]) => {
   try {
     await versionStore.deleteVersions(ids)
+    alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
     console.error('데이터 삭제 실패:', error)
     const errorMessage = versionStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   }
 }
 

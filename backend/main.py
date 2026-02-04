@@ -15,10 +15,15 @@ load_dotenv()
 
 app = FastAPI(title="Video Management System API")
 
-# CORS 설정
+# CORS: credentials(쿠키) 사용 시 allow_origins는 * 불가. 프론트 출처를 명시해야 쿠키가 유지됨.
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").strip()
+if _cors_origins:
+    _origins_list = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+else:
+    _origins_list = ["http://localhost:5173", "http://127.0.0.1:5173"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,10 +48,14 @@ async def shutdown():
 
 # 데이터베이스 관련 코드는 database.py로 분리됨
 from database import register_database_routes
+# 계정/인증 관련 코드는 auth.py로 분리됨
+from auth import register_auth_routes
 
 # 프로메테우스 관련 코드는 prometheus.py로 분리됨
 from prometheus import register_prometheus_routes
 
+# 인증 라우트 등록 (넌스 등)
+register_auth_routes(app)
 # 데이터베이스 라우트 등록
 register_database_routes(app)
 

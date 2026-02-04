@@ -341,7 +341,7 @@
       </div>
 
       <!-- CDN Status -->
-      <div ref="cdnRef" class="bg-white rounded-xl p-6 border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden shadow-sm">
+      <div class="bg-white rounded-xl p-6 border border-slate-200 flex flex-col items-center justify-center relative overflow-hidden shadow-sm">
         <!-- Background Decoration -->
         <div class="absolute inset-0 bg-slate-50/50"></div>
         
@@ -624,8 +624,6 @@ const totalServerStats = computed(() => {
 
 // Line Drawing Logic
 const containerRef = ref<HTMLElement | null>(null)
-const statusCardsContainerRef = ref<HTMLElement | null>(null)
-const cdnRef = ref<HTMLElement | null>(null)
 const activeDbRef = ref<HTMLElement | null>(null)
 const activeWasRef = ref<HTMLElement | null>(null)
 const standbyWasRef = ref<HTMLElement | null>(null)

@@ -9,6 +9,7 @@
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
     id-field="ch_id"
+    preference-key="vms_video_conversion_info"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   >
@@ -39,10 +40,12 @@ import Button from '../../common/Button.vue'
 import DataFormModal from '../../common/DataFormModal.vue'
 import { useVideoConversionInfoStore, type VideoConversion } from '../../../stores/videoConversionInfo'
 import { useCommonCodeStore } from '../../../stores/commonCode'
+import { useAlertStore } from '../../../stores/alert'
 
 // Pinia 스토어 사용
 const videoConversionStore = useVideoConversionInfoStore()
 const commonCodeStore = useCommonCodeStore()
+const alertStore = useAlertStore()
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // Table 컴포넌트 참조
@@ -73,25 +76,7 @@ const TextCell = defineComponent({
   }
 })
 
-const LiveCell = defineComponent({
-  props: {
-    value: {
-      type: [String, Number, Boolean],
-      default: ''
-    }
-  },
-  setup(props) {
-    const isLive = props.value === 'Y' || props.value === true || props.value === 'true'
-    return () => h('div', { class: 'text-center' }, [
-      h('span', {
-        class: [
-          'inline-block w-2 h-2 rounded-full',
-          isLive ? 'bg-red-500 animate-pulse' : 'bg-slate-300'
-        ]
-      })
-    ])
-  }
-})
+
 
 const StatusCell = defineComponent({
   props: {
@@ -121,6 +106,28 @@ const StatusCell = defineComponent({
   }
 })
 
+// 공통 코드 매핑용 범용 셀
+const CodeMappedCell = (grpGbn: string, grpCode: string) => defineComponent({
+  props: {
+    value: {
+      type: [String, Number],
+      default: ''
+    }
+  },
+  setup(props) {
+    const mappedName = computed(() => {
+      if (!props.value) return ''
+      return commonCodeStore.getCodeName(grpGbn, grpCode, String(props.value))
+    })
+    return () => h('span', { class: 'text-sm text-slate-700' }, mappedName.value)
+  }
+})
+
+const ResolutionCell = CodeMappedCell('C', '4')
+const VideoFormatCell = CodeMappedCell('C', '5')
+const StorageFormatCell = CodeMappedCell('C', '7')
+const OutputResolutionCell = CodeMappedCell('C', '8')
+
 const YesNoCell = defineComponent({
   props: {
     value: {
@@ -142,44 +149,40 @@ const YesNoCell = defineComponent({
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
-const columnWidths = [110, 110, 130, 110, 110, 110, 130, 110, 120, 130, 120, 120, 110, 160]
 
 // 컬럼 정의 (백엔드 스키마에 맞춤 - 실제 필드명은 API 응답 확인 후 수정 필요)
 const columns: TableColumn[] = [
-  { id: 'hq_code', header: '소속 본부', size: columnWidths[0], cellComponent: TextCell },
-  { id: 'route_code', header: '노선', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'trans_name', header: '영상변환서버', size: columnWidths[2], cellComponent: TextCell },
-  { id: 'live_yn', header: 'Live 생성', size: columnWidths[3], cellComponent: LiveCell },
-  { id: 'status', header: '동작여부', size: columnWidths[4], cellComponent: StatusCell },
-  { id: 'send_yn', header: '영상 전송', size: columnWidths[5], cellComponent: YesNoCell },
-  { id: 'format', header: '영상변환 형식', size: columnWidths[6], cellComponent: TextCell },
-  { id: 'size', header: '크기', size: columnWidths[7], cellComponent: TextCell },
-  { id: 'fps', header: 'FPS', size: columnWidths[8], cellComponent: TextCell },
-  { id: 'kbps', header: 'KBPS', size: columnWidths[9], cellComponent: TextCell },
-  { id: 'jpg_res', header: 'JPG해상도', size: columnWidths[10], cellComponent: TextCell },
-  { id: 'jpg_kbps', header: 'JPG KBPS', size: columnWidths[11], cellComponent: TextCell },
-  { id: 'sms_yn', header: 'SMS송출', size: columnWidths[12], cellComponent: YesNoCell },
-  { id: 'last_check', header: '최종 동작 확인 시점', size: columnWidths[13], cellComponent: TextCell },
-  { id: 'branch_code', header: '소속 지사', size: columnWidths[0], cellComponent: TextCell },
-  { id: 'area', header: '설치 지역', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'media_server_id', header: '미디어서버', size: columnWidths[2], cellComponent: TextCell },
-  { id: 'jpg_yn', header: 'JPG 생성', size: columnWidths[3], cellComponent: YesNoCell },
-  { id: 'wmv_yn', header: 'WMV 생성', size: columnWidths[4], cellComponent: YesNoCell },
-  { id: 'save_yn', header: '영상 저장', size: columnWidths[5], cellComponent: YesNoCell },
-  { id: 'wmv_conv_yn', header: 'WMV 변환', size: columnWidths[6], cellComponent: YesNoCell },
-  { id: 'wmv_size', header: 'WMV 크기', size: columnWidths[7], cellComponent: TextCell },
-  { id: 'wmv_fps', header: 'WMV FPS', size: columnWidths[8], cellComponent: TextCell },
-  { id: 'wmv_kbps', header: 'WMV KBPS', size: columnWidths[9], cellComponent: TextCell },
-  { id: 'max_save', header: '최대 저장', size: columnWidths[10], cellComponent: TextCell },
-  { id: 'date_display_yn', header: '날짜 표시', size: columnWidths[11], cellComponent: YesNoCell },
-  { id: 'sms_server', header: 'SMS 서버', size: columnWidths[12], cellComponent: TextCell },
-  { id: 'reg_date', header: '등록 일자', size: columnWidths[13], cellComponent: TextCell }
+  { id: 'ch_id', header: '채널 구분자', size: 120, cellComponent: TextCell },
+  { id: 'hq_code', header: '소속 본부', size: 120, cellComponent: TextCell }, // UI 매핑 필드
+  { id: 'branch_code', header: '소속 지사', size: 120, cellComponent: TextCell }, // UI 매핑 필드
+  { id: 'route_code', header: '노선', size: 120, cellComponent: TextCell }, // UI 매핑 필드
+  { id: 'cctv_id', header: 'CCTV ID', size: 140, cellComponent: TextCell },
+  { id: 'trans_id', header: '영상변환 서버 ID', size: 140, cellComponent: TextCell },
+  { id: 'fms_id', header: '미디어 서버 ID', size: 140, cellComponent: TextCell },
+  { id: 'ch_venc', header: '인코딩 방식', size: 100, cellComponent: VideoFormatCell },
+  { id: 'ch_vsize', header: '영상 크기', size: 100, cellComponent: ResolutionCell },
+  { id: 'ch_vfps', header: 'FPS', size: 80, cellComponent: TextCell },
+  { id: 'ch_vkpbs', header: 'BPS', size: 100, cellComponent: TextCell },
+  { id: 'ch_alive', header: '동작여부', size: 80, cellComponent: StatusCell },
+  { id: 'ch_alive_time', header: '최종 확인 시간', size: 160, cellComponent: TextCell },
+  { id: 'ch_alive_yn', header: '동작 확인 여부', size: 100, cellComponent: YesNoCell },
+  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: TextCell },
+  { id: 'job_status', header: '동작 상태', size: 100, cellComponent: TextCell },
+  { id: 'json_job', header: 'JSON 작업', size: 100, cellComponent: YesNoCell },
+  { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell },
+  { id: 'kt_cctv', header: 'KT 개시지점', size: 140, cellComponent: TextCell },
+  { id: 'ch_wmv_yn', header: 'WMV 저장', size: 100, cellComponent: YesNoCell },
+  { id: 'ch_wmv_venc', header: 'WMV 형식', size: 100, cellComponent: StorageFormatCell },
+  { id: 'ch_wmv_vsize', header: 'WMV 크기', size: 100, cellComponent: OutputResolutionCell },
+  { id: 'sms_session', header: 'SMS 세션', size: 140, cellComponent: TextCell },
+  { id: 'sms_host_ip', header: 'SMS 호스트 IP', size: 140, cellComponent: TextCell },
+  { id: 'ch_jpg_size', header: 'JPG 크기', size: 100, cellComponent: OutputResolutionCell },
+  { id: 'ch_jpg_kbps', header: 'JPG BPS', size: 100, cellComponent: TextCell }
 ]
 
 // 기본 표시 컬럼
 const defaultVisibleColumns = [
-  'hq_code', 'route_code', 'trans_name', 'live_yn', 'status', 'send_yn', 
-  'format', 'size', 'fps', 'kbps', 'sms_yn', 'last_check'
+  'ch_id', 'hq_code', 'route_code', 'cctv_id', 'trans_id', 'fms_id', 'ch_alive', 'ch_alive_time', 'reg_date'
 ]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
@@ -195,85 +198,46 @@ const rawData = computed(() => {
 
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
 const formFields: FormField[] = [
-  { id: 'ch_id', label: '채널 ID', type: 'text', required: true, placeholder: '예: TCH-001' },
-  { id: 'hq_code', label: '소속 본부', type: 'text', required: true },
-  { id: 'branch_code', label: '소속 지사', type: 'text', required: true },
-  { id: 'route_code', label: '노선', type: 'text', required: true },
-  { id: 'area', label: '설치 지역', type: 'text', required: true },
-  { id: 'server_id', label: '영상변환서버', type: 'text', required: true },
-  { id: 'media_server_id', label: '미디어서버', type: 'text', required: true },
-  { id: 'live_yn', label: 'Live 생성', type: 'yesno', required: true },
-  { 
-    id: 'status', 
-    label: '동작여부', 
-    type: 'select', 
-    required: true,
-    options: [
-      { value: 'active', label: '정상' },
-      { value: 'warning', label: '경고' },
-      { value: 'inactive', label: '비활성' }
-    ]
-  },
-  { id: 'jpg_yn', label: 'JPG 생성', type: 'yesno', required: true },
-  { id: 'wmv_yn', label: 'WMV 생성', type: 'yesno', required: true },
-  { id: 'send_yn', label: '영상 전송', type: 'yesno', required: true },
-  { id: 'save_yn', label: '영상 저장', type: 'yesno', required: true },
-  { id: 'format', label: '영상변환 형식', type: 'text', required: true },
-  { id: 'size', label: '크기', type: 'text', required: true },
-  { id: 'fps', label: 'FPS', type: 'text', required: true },
-  { id: 'kbps', label: 'KBPS', type: 'text', required: true },
-  { id: 'wmv_conv_yn', label: 'WMV 변환', type: 'yesno', required: true },
-  { id: 'wmv_size', label: 'WMV 크기', type: 'text' },
-  { id: 'wmv_fps', label: 'WMV FPS', type: 'text' },
-  { id: 'wmv_kbps', label: 'WMV KBPS', type: 'text' },
-  { id: 'jpg_res', label: 'JPG해상도', type: 'text' },
-  { id: 'jpg_kbps', label: 'JPG KBPS', type: 'text' },
-  { id: 'max_save', label: '최대 저장', type: 'text' },
-  { id: 'date_display_yn', label: '날짜 표시', type: 'yesno' },
-  { id: 'sms_yn', label: 'SMS송출', type: 'yesno' },
-  { id: 'sms_server', label: 'SMS 서버', type: 'text' },
-  { id: 'last_check', label: '최종 동작 확인 시점', type: 'text', placeholder: 'YYYY-MM-DD HH:mm:ss' },
-  { id: 'reg_date', label: '등록 일자', type: 'text', placeholder: 'YYYY-MM-DD' }
+  { id: 'ch_id', label: '채널 구분자', type: 'text', required: true, placeholder: '예: CH000XXXXX' },
+  { id: 'cctv_id', label: 'CCTV ID', type: 'text', required: true, placeholder: '예: CCTV000XXXXX' },
+  { id: 'trans_id', label: '영상 변환 서버 ID', type: 'text', required: true, placeholder: '예: TR0000XXXX' },
+  { id: 'fms_id', label: '미디어 서버 ID', type: 'text', required: true, placeholder: '예: FMS0000XXXX' },
+  { id: 'ch_venc', label: '영상 인코딩 방식', type: 'text', required: true },
+  { id: 'ch_vsize', label: '영상 크기', type: 'text' },
+  { id: 'ch_vfps', label: '영상 FPS', type: 'text', placeholder: '2~30' },
+  { id: 'ch_vkpbs', label: '영상 BPS', type: 'text', placeholder: '00000~99999' },
+  { id: 'ch_alive', label: '채널 동작여부', type: 'text', placeholder: 'Y / N' },
+  { id: 'ch_alive_yn', label: '동작 확인 여부', type: 'text', placeholder: 'Y / N' },
+  { id: 'reg_date', label: '등록 일자', type: 'text', required: true, placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'json_job', label: 'JSON 작업', type: 'text', required: true, placeholder: 'Y / N' },
+  { id: 'json_yn', label: 'JSON 사용 여부', type: 'text', required: true, placeholder: 'Y / N' },
+  { id: 'json_date', label: 'JSON 사용 시간', type: 'text', required: true, placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'kt_cctv', label: 'KT 개시지점 이름', type: 'text' },
+  { id: 'ch_wmv_yn', label: 'WMV 저장 여부', type: 'text', placeholder: 'Y / N' },
+  { id: 'ch_wmv_venc', label: 'WMV 저장 형식', type: 'text', required: true },
+  { id: 'ch_wmv_vsize', label: 'WMV 영상 크기', type: 'text', required: true },
+  { id: 'ch_wmv_vfps', label: 'WMV FPS', type: 'text', placeholder: '2~30' },
+  { id: 'ch_wmv_vkpbs', label: 'WMV 영상 BPS', type: 'text', placeholder: '00000~99999' },
+  { id: 'sms_session', label: 'SMS 세션 이름', type: 'text' },
+  { id: 'sms_host_ip', label: 'SMS 호스트 IP', type: 'text', placeholder: 'A.B.C.D 형식' },
+  { id: 'sms_date', label: 'SMS 전송 날짜', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'job_status', label: '동작 상태', type: 'text' },
+  { id: 'ch_jpg_size', label: 'JPG 크기', type: 'text', required: true },
+  { id: 'ch_jpg_kbps', label: 'JPG BPS', type: 'text', placeholder: '00000~99999' },
+  { id: 'ch_jpg_keep_count', label: 'JPG 파일 유지 개수', type: 'text', placeholder: '0~20' }
 ]
 
 // 일괄 변경용 폼 필드 (ID 제외, 필수 항목도 선택적으로 변경 가능)
 const batchFormFields: FormField[] = [
-  { id: 'hq_code', label: '소속 본부', type: 'text', required: false },
-  { id: 'branch_code', label: '소속 지사', type: 'text', required: false },
-  { id: 'route_code', label: '노선', type: 'text', required: false },
-  { id: 'area', label: '설치 지역', type: 'text', required: false },
-  { id: 'server_id', label: '영상변환서버', type: 'text', required: false },
-  { id: 'media_server_id', label: '미디어서버', type: 'text', required: false },
-  { id: 'live_yn', label: 'Live 생성', type: 'yesno', required: false },
-  { 
-    id: 'status', 
-    label: '동작여부', 
-    type: 'select', 
-    required: false,
-    options: [
-      { value: 'active', label: '정상' },
-      { value: 'warning', label: '경고' },
-      { value: 'inactive', label: '비활성' }
-    ]
-  },
-  { id: 'jpg_yn', label: 'JPG 생성', type: 'yesno', required: false },
-  { id: 'wmv_yn', label: 'WMV 생성', type: 'yesno', required: false },
-  { id: 'send_yn', label: '영상 전송', type: 'yesno', required: false },
-  { id: 'save_yn', label: '영상 저장', type: 'yesno', required: false },
-  { id: 'format', label: '영상변환 형식', type: 'text', required: false },
-  { id: 'size', label: '크기', type: 'text', required: false },
-  { id: 'fps', label: 'FPS', type: 'text', required: false },
-  { id: 'kbps', label: 'KBPS', type: 'text', required: false },
-  { id: 'wmv_conv_yn', label: 'WMV 변환', type: 'yesno', required: false },
-  { id: 'wmv_size', label: 'WMV 크기', type: 'text', required: false },
-  { id: 'wmv_fps', label: 'WMV FPS', type: 'text', required: false },
-  { id: 'wmv_kbps', label: 'WMV KBPS', type: 'text', required: false },
-  { id: 'jpg_res', label: 'JPG해상도', type: 'text', required: false },
-  { id: 'jpg_kbps', label: 'JPG KBPS', type: 'text', required: false },
-  { id: 'max_save', label: '최대 저장', type: 'text', required: false },
-  { id: 'date_display_yn', label: '날짜 표시', type: 'yesno', required: false },
-  { id: 'sms_yn', label: 'SMS송출', type: 'yesno', required: false },
-  { id: 'sms_server', label: 'SMS 서버', type: 'text', required: false }
+  { id: 'ch_venc', label: '영상 인코딩 방식', type: 'text' },
+  { id: 'ch_vsize', label: '영상 크기', type: 'text' },
+  { id: 'ch_vfps', label: '영상 FPS', type: 'text' },
+  { id: 'ch_vkpbs', label: '영상 BPS', type: 'text' },
+  { id: 'ch_alive', label: '채널 동작여부', type: 'text' },
+  { id: 'json_job', label: 'JSON 작업', type: 'text' },
+  { id: 'json_yn', label: 'JSON 사용 여부', type: 'text' },
+  { id: 'ch_wmv_yn', label: 'WMV 저장 여부', type: 'text' },
+  { id: 'ch_jpg_keep_count', label: 'JPG 파일 유지 개수', type: 'text' }
 ]
 
 // 데이터 업데이트 처리 (생성/수정)
@@ -289,10 +253,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     } else {
       await videoConversionStore.updateVideoConversion(data.ch_id, data)
     }
+    alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
     const errorMessage = videoConversionStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }
@@ -307,10 +272,11 @@ const handleDataDelete = async (ids: string[]) => {
   try {
     isSubmitting.value = true
     await videoConversionStore.deleteVideoConversions(ids)
+    alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
     console.error('데이터 삭제 실패:', error)
     const errorMessage = videoConversionStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }
@@ -322,7 +288,7 @@ const handleBatchUpdate = () => {
     batchUpdateData.value = {}
     isBatchModalOpen.value = true
   } else {
-    alert('선택된 항목이 없습니다.')
+    alertStore.show('선택된 항목이 없습니다.', 'warning')
   }
 }
 
@@ -347,17 +313,17 @@ const handleBatchModalSubmit = async (data: Record<string, any>) => {
       : []
     
     if (selectedIds.length === 0) {
-      alert('선택된 항목이 없습니다.')
+      alertStore.show('선택된 항목이 없습니다.', 'warning')
       return
     }
     
     await videoConversionStore.batchUpdateVideoConversions(selectedIds, data)
     handleBatchModalClose()
-    alert(`일괄 변경 완료: ${selectedIds.length}개 항목`)
+    alertStore.show(`일괄 변경 완료: ${selectedIds.length}개 항목`, 'success')
   } catch (error: any) {
     console.error('일괄 변경 실패:', error)
     const errorMessage = videoConversionStore.error || error.response?.data?.detail || '일괄 변경 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }

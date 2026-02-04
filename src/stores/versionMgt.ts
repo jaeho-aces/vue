@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { ApiStoreHelper, BaseStoreState } from '../utils/apiStore'
-import { api } from '../services/api'
 
 // 백엔드 스키마와 동일한 타입 (변환 없이 사용)
 export interface Version {
@@ -32,19 +31,19 @@ export const useVersionMgtStore = defineStore('versionMgt', {
   getters: {
     // 전체 개수
     totalCount: (state) => state.items.length,
-    
+
     // ID로 찾기
     getById: (state) => (id: string) => {
       return state.items.find(item => item.version_id === id)
     },
-    
+
     // 제품명으로 필터링
     getByProduct: (state) => (productName: string) => {
-      return state.items.filter(item => 
+      return state.items.filter(item =>
         item.product_name.toLowerCase().includes(productName.toLowerCase())
       )
     },
-    
+
     // 검색
     search: (state) => (query: string) => {
       const lowerQuery = query.toLowerCase()
@@ -104,8 +103,8 @@ export const useVersionMgtStore = defineStore('versionMgt', {
     // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchVersions(forceRefresh = false) {
       await this.getHelper().fetchAll(
-        forceRefresh, 
-        5 * 60 * 1000, 
+        forceRefresh,
+        5 * 60 * 1000,
         '버전 관리 데이터',
         this.getPhpTableName()
       )

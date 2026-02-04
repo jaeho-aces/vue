@@ -6,10 +6,19 @@
 const getApiBaseUrl = (): string => {
   // Vite는 import.meta.env를 사용하여 환경 변수에 접근
   const baseUrl = import.meta.env.VITE_API_BASE_URL
-  
-  // FastAPI는 /api 경로를 사용하므로 baseURL은 빈 문자열
-  // 프록시가 /api 경로를 FastAPI 서버로 전달
-  return ''
+
+  // 만약 baseUrl이 없으면 (프로덕션 빌드 후 file:// 실행 시 등)
+  // 기본적으로 localhost:8000을 바라보도록 설정
+  if (!baseUrl) {
+    // 개발 모드에서는 프록시가 작동하므로 빈 문자열 반환 (상대 경로)
+    if (import.meta.env.DEV) {
+      return ''
+    }
+    // 프로덕션 모드(빌드 후)에서는 절대 경로 필요
+    return 'http://localhost:8000'
+  }
+
+  return baseUrl
 }
 
 // API 설정
@@ -54,11 +63,11 @@ export const getApiUrl = (endpoint: string): string => {
     }
     return endpoint
   }
-  
+
   // 상대 경로만 반환 (axios가 baseURL과 자동 결합)
   // endpoint가 /로 시작하는지 확인
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
-  
+
   // URL 구성 로깅 (개발 환경)
   if (import.meta.env.DEV) {
     console.log('[getApiUrl] URL 구성:', {
@@ -68,7 +77,7 @@ export const getApiUrl = (endpoint: string): string => {
       finalUrl: `${apiConfig.baseURL}${path}` // 최종 URL은 baseURL + path
     })
   }
-  
+
   return path
 }
 

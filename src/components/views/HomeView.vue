@@ -10,14 +10,33 @@
               <span class="text-xl font-bold text-slate-800">한국도로공사</span>
             </div>
             <h1 class="text-3xl font-bold text-slate-900 mt-4">
-              안녕하세요, <span class="text-blue-600">관리자님</span>
+              안녕하세요, <span class="text-blue-600">{{ authStore.currentUser?.name || '관리자' }}님</span>
             </h1>
             <p class="text-slate-500 mt-2">
               CCTV 통합 관제 시스템에 접속하셨습니다.
             </p>
           </div>
-          <div class="text-right">
-            <div class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full mb-3">
+          <div class="text-right flex flex-col items-end gap-2">
+            <div class="flex items-center gap-4">
+              <template v-if="authStore.isAuthenticated">
+                <span class="text-slate-600 font-medium">{{ authStore.currentUser?.name || authStore.currentUser?.id }}님</span>
+                <button
+                  type="button"
+                  @click="handleLogout"
+                  class="text-sm text-slate-500 hover:text-slate-700 underline"
+                >
+                  로그아웃
+                </button>
+              </template>
+              <router-link
+                v-else
+                to="/login"
+                class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                로그인
+              </router-link>
+            </div>
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-full">
               <Clock :size="18" class="text-slate-500" />
               <span class="text-slate-700 font-medium font-mono">
                 {{ formattedTime }}
@@ -172,7 +191,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useNavigationStore } from '../../stores/navigation'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
+import { api } from '../../services/api'
 import {
   LayoutDashboard,
   Video,
@@ -190,15 +211,21 @@ import {
   Users
 } from 'lucide-vue-next'
 
-const navigationStore = useNavigationStore()
+const router = useRouter()
+const authStore = useAuthStore()
 const currentTime = ref(new Date())
+
+const handleLogout = async () => {
+  await authStore.logout(api)
+  router.replace('/login')
+}
 
 const menuCards = [
   {
     title: '시스템 현황',
     description: '전체 시스템의 상태와 주요 지표를 한눈에 파악합니다.',
     icon: LayoutDashboard,
-    path: '/system-status',
+    path: '/SystemStatusView',
     tab: 'dashboard',
     color: 'from-blue-500 to-indigo-600',
     lightColor: 'bg-blue-50 text-blue-600'
@@ -207,7 +234,7 @@ const menuCards = [
     title: '서버별 현황',
     description: '각 서버의 세부 상태와 리소스 사용량을 모니터링합니다.',
     icon: Activity,
-    path: '/server-status',
+    path: '/ServerStatusView',
     tab: 'server',
     color: 'from-emerald-500 to-teal-600',
     lightColor: 'bg-emerald-50 text-emerald-600'
@@ -216,7 +243,7 @@ const menuCards = [
     title: '영상 보기',
     description: '실시간 CCTV 영상을 그리드 형태로 조회하고 제어합니다.',
     icon: Video,
-    path: '/cctv',
+    path: '/VideoView',
     tab: 'cctv',
     color: 'from-violet-500 to-purple-600',
     lightColor: 'bg-violet-50 text-violet-600'
@@ -225,7 +252,7 @@ const menuCards = [
     title: '장치 관리',
     description: '카메라, 서버 등 장치 정보를 관리하고 설정합니다.',
     icon: Server,
-    path: '/device-manage',
+    path: '/DeviceManagementView',
     tab: 'device-manage',
     color: 'from-slate-600 to-slate-800',
     lightColor: 'bg-slate-50 text-slate-600'
@@ -234,7 +261,7 @@ const menuCards = [
     title: '일반 관리',
     description: '사용자 설정 및 시스템 환경을 구성합니다.',
     icon: Users,
-    path: '/general-manage',
+    path: '/ManagementView',
     tab: 'general-manage',
     color: 'from-amber-500 to-orange-600',
     lightColor: 'bg-amber-50 text-amber-600'
@@ -265,18 +292,15 @@ const formattedDate = computed(() => {
 })
 
 const handleNavigate = (path: string) => {
-  // URL 변경 없이 내부 상태로만 페이지 전환
-  const pageMap: Record<string, string> = {
-    '/system-status': 'system-status',
-    '/server-status': 'server-status',
-    '/cctv': 'cctv',
-    '/device-manage': 'device-manage',
-    '/general-manage': 'general-manage'
+  if (path.startsWith('popup:')) {
+    const routeName = path.split(':')[1]
+    const routeData = router.resolve({ name: routeName })
+    window.open(routeData.href, '_blank', 'width=1920,height=1080')
+  } else {
+    router.push(path)
   }
-  
-  const page = pageMap[path] || 'system-status'
-  navigationStore.setCurrentPage(page)
 }
+
 
 let timer: ReturnType<typeof setInterval> | null = null
 

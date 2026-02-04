@@ -10,12 +10,39 @@
       @close="handleModalClose"
       @submit="handleModalSubmit"
     />
-    
+
+    <!-- 삭제 확인 모달 -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="isDeleteConfirmOpen"
+          class="delete-confirm-overlay"
+          @mousedown.self="deleteConfirmMousedownOnOverlay = true"
+          @mouseup.self="handleDeleteConfirmOverlayMouseUp"
+        >
+          <div class="delete-confirm-container" @mousedown.stop @click.stop>
+            <div class="delete-confirm-header">
+              <span class="delete-confirm-icon">⚠</span>
+              <h2 class="delete-confirm-title">삭제 확인</h2>
+              <button type="button" class="delete-confirm-close" @click="handleDeleteConfirmCancel" aria-label="닫기">×</button>
+            </div>
+            <div class="delete-confirm-body">
+              <p class="delete-confirm-message">{{ deleteConfirmMessage }}</p>
+            </div>
+            <div class="delete-confirm-footer">
+              <button type="button" class="delete-confirm-btn cancel" @click="handleDeleteConfirmCancel">취소</button>
+              <button type="button" class="delete-confirm-btn confirm" @click="handleDeleteConfirm">삭제</button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
     <!-- 상단 툴바 (컬럼 선택 + 버튼) -->
     <div class="top-toolbar">
       <div class="toolbar-left">
         <div class="column-selector-container">
-          <div class="column-selector-wrapper">
+          <div class="column-selector-wrapper" ref="columnSelectorRef">
             <button 
               @click="isColumnDropdownOpen = !isColumnDropdownOpen"
               class="column-selector-button"
@@ -23,7 +50,7 @@
               컬럼 선택
               <span class="dropdown-arrow" :class="{ 'open': isColumnDropdownOpen }">▼</span>
             </button>
-            <div v-if="isColumnDropdownOpen" class="column-dropdown" @click.stop>
+            <div v-if="isColumnDropdownOpen" class="column-dropdown">
               <div class="dropdown-header">
                 <span>표시할 컬럼 선택</span>
                 <button @click="isColumnDropdownOpen = false" class="close-button">×</button>
@@ -77,8 +104,15 @@
         </div>
       </div>
     </div>
-    <div class="table-container" ref="tableContainerRef">
-      <div class="table-wrapper">
+    <div
+      class="table-container"
+      ref="tableContainerRef"
+      :style="{ overflowX: needsHorizontalScroll ? 'auto' : 'hidden' }"
+    >
+      <div
+        class="table-wrapper"
+        :style="{ width: needsHorizontalScroll ? `${effectiveTableWidth}px` : '100%' }"
+      >
       <!-- 헤더 -->
       <div class="table-header sticky top-0 z-10 bg-slate-50">
         <div
@@ -86,8 +120,7 @@
           :style="{
             gridTemplateColumns: gridTemplateColumns,
             gridTemplateRows: '40px',
-            width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
-            minWidth: isBrowserWidthAboveMin ? '0' : `${minTableWidth}px`
+            width: '100%'
           }"
         >
           <!-- 체크박스 컬럼 -->
@@ -105,7 +138,7 @@
           </div>
           <!-- ID 컬럼 (idField가 있을 때만 표시) -->
           <div
-            v-if="idField && idField.trim() !== ''"
+            v-if="idField && idField.trim() !== '' && !hideIdColumn"
             class="header-cell bg-slate-100 border-r sticky-id-column"
             :class="{ 'filtered': columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
             :style="{ 
@@ -128,7 +161,7 @@
               @mousedown.stop="handleResizeStart(idField, $event.clientX, getColumnWidth(idField, idColumnWidth))"
             ></div>
             <!-- 필터 드롭다운 -->
-            <div v-if="openFilterDropdown === idField" class="filter-dropdown" @click.stop>
+            <div v-if="openFilterDropdown === idField" class="filter-dropdown">
               <div class="filter-section">
                 <div class="filter-section-title">정렬</div>
                 <div class="filter-options">
@@ -188,7 +221,7 @@
                 @mousedown.stop="handleResizeStart(column.id, $event.clientX, getColumnWidth(column.id, column.size))"
               ></div>
               <!-- 필터 드롭다운 -->
-              <div v-if="openFilterDropdown === column.id" class="filter-dropdown" @click.stop>
+              <div v-if="openFilterDropdown === column.id" class="filter-dropdown">
                 <div class="filter-section">
                   <div class="filter-section-title">정렬</div>
                   <div class="filter-options">
@@ -246,7 +279,7 @@
               position: 'absolute',
               top: `${virtualRow.start}px`,
               left: 0,
-              width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
+              width: '100%',
               height: '40px'
             }"
           >
@@ -255,8 +288,7 @@
               :style="{
                 gridTemplateColumns: gridTemplateColumns,
                 gridTemplateRows: '40px',
-                width: isBrowserWidthAboveMin ? '100%' : `${minTableWidth}px`,
-                minWidth: isBrowserWidthAboveMin ? '0' : `${minTableWidth}px`
+                width: '100%'
               }"
             >
               <!-- 체크박스 컬럼 -->
@@ -273,7 +305,7 @@
               </div>
               <!-- ID 컬럼 (idField가 있을 때만 표시) -->
               <div
-                v-if="idField && idField.trim() !== ''"
+                v-if="idField && idField.trim() !== '' && !hideIdColumn"
                 class="data-cell data-cell-id border-r border-slate-300 font-medium sticky-id-column"
                 :style="{ 
                   left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
@@ -313,6 +345,7 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import { type Component } from 'vue'
 import DataFormModal, { type FormField } from './DataFormModal.vue'
 import Button from './Button.vue'
+import { usePreferenceStore } from '../../stores/preference'
 
 // 타입 정의
 export interface TableColumn {
@@ -333,6 +366,8 @@ interface Props {
   idColumnWidth?: number
   idField?: string
   hideEditButton?: boolean // 수정 버튼 숨김 옵션
+  preferenceKey?: string // 컬럼 설정 저장 키
+  hideIdColumn?: boolean // ID 컬럼 숨김 여부
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -340,7 +375,9 @@ const props = withDefaults(defineProps<Props>(), {
   idColumnWidth: 150,
   idField: 'id',
   defaultVisibleColumns: () => [],
-  hideEditButton: false
+  hideEditButton: false,
+  preferenceKey: '',
+  hideIdColumn: false
 })
 
 const emit = defineEmits<{
@@ -366,6 +403,8 @@ const defaultVisibleSet = computed(() => {
 // 표시할 컬럼 관리
 const visibleColumns = ref<Set<string>>(new Set(defaultVisibleSet.value))
 
+const preferenceStore = usePreferenceStore()
+
 // 드롭다운 열림/닫힘 상태
 const isColumnDropdownOpen = ref(false)
 
@@ -378,12 +417,41 @@ const columnFilters = ref<Record<string, { search: string }>>({})
 // 정렬 상태 관리
 const sorting = ref<Array<{ id: string; desc: boolean }>>([])
 
+const columnSelectorRef = ref<HTMLElement | null>(null)
+
 // 컬럼 너비 관리 (사용자가 조절한 너비 저장)
 const columnWidthsState = ref<Record<string, number>>({})
 
+// 컬럼 헤더 텍스트 길이에 따른 최소 너비 계산 (한글/영문 구분)
+const estimateHeaderWidth = (text: string) => {
+  if (!text) return 30
+  let width = 0
+  for (const char of text) {
+    if (/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(char)) {
+      width += 15 // 한글 한 글자당 약 15px
+    } else if (/[A-Z]/.test(char)) {
+      width += 10 // 대문자 영문 약 10px
+    } else {
+      width += 8  // 소문자/숫자/기호 약 8px
+    }
+  }
+  // 여백(16px) + 필터 아이콘 버튼(24px) + 여유 여백(15px)
+  return width + 55 
+}
+
+const getHeaderMinWidth = (columnId: string) => {
+  if (columnId === 'checkbox') return props.checkboxColumnWidth
+  if (columnId === props.idField) return estimateHeaderWidth('ID')
+  
+  const col = props.columns.find(c => c.id === columnId)
+  return col ? estimateHeaderWidth(col.header) : 30
+}
+
 // 컬럼 너비 가져오기 (사용자 조절값 또는 기본값)
 const getColumnWidth = (columnId: string, defaultWidth: number) => {
-  return columnWidthsState.value[columnId] ?? defaultWidth
+  const minW = getHeaderMinWidth(columnId)
+  const currentW = columnWidthsState.value[columnId] ?? defaultWidth
+  return Math.max(minW, currentW)
 }
 
 // 리사이즈 상태
@@ -406,13 +474,17 @@ const handleResizeStart = (columnId: string, startX: number, currentWidth: numbe
 const handleResizeMove = (e: MouseEvent) => {
   if (!resizingColumn.value) return
   
+  const minW = getHeaderMinWidth(resizingColumn.value)
   const diff = e.clientX - resizeStartX.value
-  const newWidth = Math.max(30, resizeStartWidth.value + diff) // 최소 30px
+  const newWidth = Math.max(minW, resizeStartWidth.value + diff)
   columnWidthsState.value[resizingColumn.value] = newWidth
 }
 
-// 리사이즈 종료
+// 리사이즈 종료 (저장된 컬럼 너비 반영)
 const handleResizeEnd = () => {
+  if (resizingColumn.value && props.preferenceKey) {
+    preferenceStore.setTableColumnWidths(props.preferenceKey, { ...columnWidthsState.value })
+  }
   resizingColumn.value = null
   document.removeEventListener('mousemove', handleResizeMove)
   document.removeEventListener('mouseup', handleResizeEnd)
@@ -423,6 +495,33 @@ const handleResizeEnd = () => {
 // 모달 상태
 const isModalOpen = ref(false)
 const editingData = ref<any | null>(null)
+
+// 삭제 확인 모달 상태
+const isDeleteConfirmOpen = ref(false)
+const pendingDeleteIds = ref<string[]>([])
+const deleteConfirmMousedownOnOverlay = ref(false)
+const deleteConfirmMessage = computed(() => {
+  const count = pendingDeleteIds.value.length
+  return count === 1
+    ? '선택한 1건을 삭제하시겠습니까?'
+    : `선택한 ${count}건을 삭제하시겠습니까?`
+})
+const handleDeleteConfirmOverlayMouseUp = () => {
+  if (deleteConfirmMousedownOnOverlay.value) handleDeleteConfirmCancel()
+  deleteConfirmMousedownOnOverlay.value = false
+}
+const handleDeleteConfirmCancel = () => {
+  isDeleteConfirmOpen.value = false
+  pendingDeleteIds.value = []
+}
+const handleDeleteConfirm = () => {
+  const ids = [...pendingDeleteIds.value]
+  handleDeleteConfirmCancel()
+  internalData.value = internalData.value.filter((item: any) => !ids.includes(getRowId(item)))
+  emit('update:modelValue', [...internalData.value])
+  emit('delete', ids)
+  selectedRowIds.value.clear()
+}
 
 // 버튼 핸들러
 const handleNew = () => {
@@ -439,9 +538,12 @@ const handleEdit = () => {
     const selectedId = Array.from(selectedRowIds.value)[0]
     const selectedItem = filteredData.value.find((item: any) => getRowId(item) === selectedId)
     if (selectedItem) {
+      // 선택한 행 데이터를 모달에 넣기 위해 먼저 설정한 뒤 모달 오픈
       editingData.value = { ...selectedItem }
       if (props.formFields && props.formFields.length > 0) {
-        isModalOpen.value = true
+        nextTick(() => {
+          isModalOpen.value = true
+        })
       } else {
         emit('edit', editingData.value)
       }
@@ -451,14 +553,8 @@ const handleEdit = () => {
 
 const handleDelete = () => {
   if (selectedRowIds.value.size > 0) {
-    const ids = Array.from(selectedRowIds.value)
-    // 내부 데이터에서 삭제
-    internalData.value = internalData.value.filter((item: any) => !ids.includes(getRowId(item)))
-    // 부모에게 업데이트 알림
-    emit('update:modelValue', [...internalData.value])
-    // 이벤트도 emit (필요한 경우)
-    emit('delete', ids)
-    selectedRowIds.value.clear()
+    pendingDeleteIds.value = Array.from(selectedRowIds.value)
+    isDeleteConfirmOpen.value = true
   }
 }
 
@@ -495,7 +591,11 @@ const handleModalSubmit = (data: Record<string, any>) => {
 
 // 행 ID 가져오기
 const getRowId = (row: any): string => {
-  return row?.[props.idField] || ''
+  if (props.idField && row?.[props.idField]) {
+    return String(row[props.idField])
+  }
+  // fallback: id 또는 key 필드 확인, 없으면 빈 문자열
+  return String(row?.id || row?.key || '')
 }
 
 // 선택된 행 ID 관리
@@ -586,6 +686,11 @@ const toggleColumn = (columnId: string) => {
     newSet.add(columnId)
   }
   visibleColumns.value = newSet
+  
+  // 설정 저장
+  if (props.preferenceKey) {
+    preferenceStore.setTableColumns(props.preferenceKey, Array.from(newSet))
+  }
 }
 
 // 헤더에 표시할 모든 컬럼
@@ -665,7 +770,7 @@ const tableColumns = computed<ColumnDef<any>[]>(() => {
   const cols: ColumnDef<any>[] = []
   
   // idField가 있을 때만 ID 컬럼 추가
-  if (props.idField && props.idField.trim() !== '') {
+  if (props.idField && props.idField.trim() !== '' && !props.hideIdColumn) {
     cols.push({
       accessorKey: props.idField,
       header: 'ID',
@@ -710,84 +815,68 @@ const table = useVueTable({
   }
 })
 
-// 브라우저 전체 너비 감지
-const browserWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1920)
-
-// 최소 브라우저 너비 (1920px)
-const MIN_BROWSER_WIDTH = 1920
-
-// 브라우저 너비가 최소값보다 큰지 확인
-const isBrowserWidthAboveMin = computed(() => {
-  const width = browserWidth.value || MIN_BROWSER_WIDTH
-  return width >= MIN_BROWSER_WIDTH
-})
-
 // 컨테이너 너비 감지
 const containerWidth = ref(0)
 
-// 테이블 최소 너비
-const minTableWidth = computed(() => {
+// 클램프된 테이블 전체 너비 (컬럼 최소 너비 적용 시)
+const effectiveTableWidth = computed(() => {
   const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
-  const idW = (props.idField && props.idField.trim() !== '') 
-    ? getColumnWidth(props.idField, props.idColumnWidth) 
-    : 0
-  const visibleWidths = visibleColumnsList.value.map(col => 
+  const hasIdColumn = props.idField && props.idField.trim() !== '' && !props.hideIdColumn
+  const idBaseW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
+  const visibleColumnBaseWidths = visibleColumnsList.value.map(col =>
     getColumnWidth(col.id, col.size)
   )
-  const total = checkboxW + idW + visibleWidths.reduce((sum, width) => sum + width, 0)
-  return Math.max(total, 1920)
+  const totalBaseWidth = idBaseW + visibleColumnBaseWidths.reduce((sum, w) => sum + w, 0)
+  const tableContainerW = containerWidth.value || (checkboxW + totalBaseWidth)
+  const availableWidth = Math.max(0, tableContainerW - checkboxW)
+  const ratio = totalBaseWidth > 0 ? availableWidth / totalBaseWidth : 1
+  const idW = idBaseW * ratio
+  const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
+  const idWClamped = hasIdColumn ? Math.max(idW, getHeaderMinWidth(props.idField)) : 0
+  const visibleClamped = visibleColumnWidths.map((w, i) =>
+    Math.max(w, getHeaderMinWidth(visibleColumnsList.value[i].id))
+  )
+  return checkboxW + idWClamped + visibleClamped.reduce((sum, w) => sum + w, 0)
 })
 
-// Grid 컬럼 템플릿 계산
+// 컬럼 최소 너비를 지키면 테이블이 컨테이너보다 넓어질 때만 true
+const needsHorizontalScroll = computed(() => {
+  const cw = containerWidth.value
+  return cw > 0 && effectiveTableWidth.value > cw
+})
+
+// Grid 컬럼 템플릿 계산 (피팅 모드: 스케일된 너비, 오버플로우 모드: 클램프된 너비)
 const gridTemplateColumns = computed(() => {
   const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
-  const hasIdColumn = props.idField && props.idField.trim() !== ''
+  const hasIdColumn = props.idField && props.idField.trim() !== '' && !props.hideIdColumn
   const idBaseW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
-  const visibleColumnBaseWidths = visibleColumnsList.value.map(col => 
+  const visibleColumnBaseWidths = visibleColumnsList.value.map(col =>
     getColumnWidth(col.id, col.size)
   )
-  
-  const browserW = browserWidth.value || MIN_BROWSER_WIDTH
+
   const totalBaseWidth = idBaseW + visibleColumnBaseWidths.reduce((sum, w) => sum + w, 0)
-  const currentTotal = checkboxW + totalBaseWidth
-  
-  if (browserW < MIN_BROWSER_WIDTH) {
-    if (currentTotal < 1920) {
-      const ratio = 1920 / currentTotal
-      const expandedIdW = idBaseW * ratio
-      const expandedColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
-      if (hasIdColumn) {
-        return `${checkboxW}px ${expandedIdW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
-      } else {
-        return `${checkboxW}px ${expandedColumnWidths.map(w => `${w}px`).join(' ')}`
-      }
-    }
-    if (hasIdColumn) {
-      return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
-    } else {
-      return `${checkboxW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
-    }
-  }
-  
-  const tableContainerW = containerWidth.value || currentTotal
+  const tableContainerW = containerWidth.value || (checkboxW + totalBaseWidth)
   const availableWidth = Math.max(0, tableContainerW - checkboxW)
-  
-  if (availableWidth > totalBaseWidth) {
-    const ratio = availableWidth / totalBaseWidth
-    const idW = idBaseW * ratio
-    const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
+
+  const ratio = totalBaseWidth > 0 ? availableWidth / totalBaseWidth : 1
+  const idW = idBaseW * ratio
+  const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
+  const idWClamped = hasIdColumn ? Math.max(idW, getHeaderMinWidth(props.idField)) : 0
+  const visibleClamped = visibleColumnWidths.map((w, i) =>
+    Math.max(w, getHeaderMinWidth(visibleColumnsList.value[i].id))
+  )
+  const totalClamped = checkboxW + idWClamped + visibleClamped.reduce((sum, w) => sum + w, 0)
+
+  if (totalClamped > tableContainerW) {
     if (hasIdColumn) {
-      return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
-    } else {
-      return `${checkboxW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+      return `${checkboxW}px ${idWClamped}px ${visibleClamped.map(w => `${w}px`).join(' ')}`
     }
-  } else {
-    if (hasIdColumn) {
-      return `${checkboxW}px ${idBaseW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
-    } else {
-      return `${checkboxW}px ${visibleColumnBaseWidths.map(w => `${w}px`).join(' ')}`
-    }
+    return `${checkboxW}px ${visibleClamped.map(w => `${w}px`).join(' ')}`
   }
+  if (hasIdColumn) {
+    return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+  }
+  return `${checkboxW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
 })
 
 // 가상 스크롤 설정
@@ -822,7 +911,7 @@ const sortedRowsHash = computed(() => {
 
 const virtualizer = useVirtualizer({
   get count() {
-    const _ = sortedRowsHash.value
+    sortedRowsHash.value // Trigger dependency
     return sortedRows.value.length
   },
   getScrollElement: () => tableContainerRef.value,
@@ -847,12 +936,6 @@ watch(
   { immediate: true }
 )
 
-// 브라우저 너비 업데이트
-const updateBrowserWidth = () => {
-  browserWidth.value = window.innerWidth
-}
-
-// 컨테이너 너비 감지
 const updateContainerWidth = () => {
   if (tableContainerRef.value) {
     containerWidth.value = tableContainerRef.value.clientWidth
@@ -865,36 +948,43 @@ let clickOutsideHandler: ((event: MouseEvent) => void) | null = null
 onMounted(() => {
   clickOutsideHandler = (event: MouseEvent) => {
     const target = event.target as HTMLElement
+    if (!target) return
     
-    if (isFilterButtonClicking.value) {
-      return
+    // 1. 컬럼 선택 드롭다운 처리
+    if (isColumnDropdownOpen.value && columnSelectorRef.value) {
+      if (!columnSelectorRef.value.contains(target)) {
+        isColumnDropdownOpen.value = false
+      }
     }
     
-    const filterButton = target.closest('.filter-button')
-    const filterDropdown = target.closest('.filter-dropdown')
-    const filterIcon = target.closest('.filter-icon')
-    const isFilterIconText = target.textContent === '🔍' || target.textContent?.includes('🔍')
-    
-    if (filterButton || filterDropdown || filterIcon || isFilterIconText) {
-      return
+    // 2. 필터 드롭다운 처리
+    if (openFilterDropdown.value && !isFilterButtonClicking.value) {
+      const isFilterRelated = target.closest('.filter-button') || target.closest('.filter-dropdown')
+      if (!isFilterRelated) {
+        openFilterDropdown.value = null
+      }
     }
-    
-    if (!target.closest('.column-selector-wrapper')) {
-      isColumnDropdownOpen.value = false
+  }
+  
+  // 저장된 컬럼 설정 로드
+  if (props.preferenceKey) {
+    const savedColumns = preferenceStore.getTableColumns(props.preferenceKey)
+    if (savedColumns) {
+      visibleColumns.value = new Set(savedColumns)
     }
-    
-    openFilterDropdown.value = null
+    const savedWidths = preferenceStore.getTableColumnWidths(props.preferenceKey)
+    if (savedWidths && Object.keys(savedWidths).length > 0) {
+      columnWidthsState.value = { ...savedWidths }
+    }
   }
   
   setTimeout(() => {
     if (clickOutsideHandler) {
-      document.addEventListener('click', clickOutsideHandler, false)
+      document.addEventListener('click', clickOutsideHandler, true)
     }
   }, 0)
   
-  updateBrowserWidth()
   updateContainerWidth()
-  window.addEventListener('resize', updateBrowserWidth)
   window.addEventListener('resize', updateContainerWidth)
   
   if (tableContainerRef.value) {
@@ -907,9 +997,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (clickOutsideHandler) {
-    document.removeEventListener('click', clickOutsideHandler)
+    document.removeEventListener('click', clickOutsideHandler, true)
   }
-  window.removeEventListener('resize', updateBrowserWidth)
   window.removeEventListener('resize', updateContainerWidth)
   if (resizeObserver) {
     resizeObserver.disconnect()
@@ -943,8 +1032,6 @@ defineExpose({
 }
 
 .table-container {
-  width: 100%;
-  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   position: relative;
@@ -956,21 +1043,10 @@ defineExpose({
 .table-wrapper {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 1919px) {
-  .table-container {
-    overflow-x: auto;
-  }
-  
-  .table-wrapper {
-    min-width: 1920px;
-  }
-  
-  .data-item-wrapper {
-    min-width: 1920px;
-  }
-}
+
 
 .table-header {
   position: sticky;
@@ -1040,9 +1116,11 @@ defineExpose({
   display: grid;
   grid-template-rows: 40px;
   border-collapse: collapse;
+  box-sizing: border-box;
 }
 
 .grid-header .header-cell {
+  box-sizing: border-box;
   text-align: center;
   padding: 0.75rem;
   font-size: 0.875rem;
@@ -1078,6 +1156,7 @@ defineExpose({
   display: grid;
   grid-template-rows: 40px;
   border-collapse: collapse;
+  box-sizing: border-box;
 }
 
 .data-cell:not(.data-cell-id) {
@@ -1135,6 +1214,7 @@ defineExpose({
 }
 
 .data-cell {
+  box-sizing: border-box;
   text-align: center;
   padding: 0.75rem;
   font-size: 0.875rem;
@@ -1481,5 +1561,157 @@ defineExpose({
 }
 
 /* 버튼 관련 스타일은 Button.vue 컴포넌트에 포함되어 있음 */
+
+/* 삭제 확인 모달 */
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 20px;
+}
+
+.delete-confirm-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 420px;
+  overflow: hidden;
+}
+
+.delete-confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.delete-confirm-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.delete-confirm-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  flex: 1;
+}
+
+.delete-confirm-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.delete-confirm-close:hover {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #1e293b;
+}
+
+.delete-confirm-body {
+  padding: 24px 20px;
+}
+
+.delete-confirm-message {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #334155;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.delete-confirm-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.delete-confirm-btn {
+  min-width: 88px;
+  padding: 10px 20px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-confirm-btn.cancel {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.delete-confirm-btn.cancel:hover {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.delete-confirm-btn.confirm {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #fff;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
+}
+
+.delete-confirm-btn.confirm:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+}
+
+.delete-confirm-btn:active {
+  transform: scale(0.98);
+}
+
+/* 삭제 확인 모달 트랜지션 */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+.modal-enter-active .delete-confirm-container,
+.modal-leave-active .delete-confirm-container {
+  transition: transform 0.2s ease;
+}
+.modal-enter-from .delete-confirm-container,
+.modal-leave-to .delete-confirm-container {
+  transform: scale(0.95);
+}
 </style>
 

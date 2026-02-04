@@ -1,10 +1,8 @@
 import { defineStore } from 'pinia'
 import { ApiStoreHelper, BaseStoreState } from '../utils/apiStore'
-import { api } from '../services/api'
 
 // 백엔드 스키마와 동일한 타입 (변환 없이 사용)
 export interface MediaServer {
-  id?: number
   fms_id: string
   fms_name: string
   fms_ip: string
@@ -13,10 +11,10 @@ export interface MediaServer {
   fms_passwd: string
   fms_port: number
   svr_type: string
-  alive: string
+  alive: string | null
   alive_time: string | null
-  created_at?: string
-  updated_at?: string
+  json_job: string | null
+  json_yn: string | null
 }
 
 interface MediaServerInfoState {
@@ -37,12 +35,12 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
   getters: {
     // 전체 개수
     totalCount: (state) => state.items.length,
-    
+
     // ID로 찾기
     getById: (state) => (id: string) => {
       return state.items.find(item => item.fms_id === id)
     },
-    
+
     // 검색
     search: (state) => (query: string) => {
       const lowerQuery = query.toLowerCase()
@@ -59,19 +57,18 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
     // 백엔드 API 응답을 프론트엔드 형식으로 변환
     transformFromAPI(data: any): MediaServer {
       return {
-        id: data.id,
         fms_id: data.fms_id || '',
         fms_name: data.fms_name || '',
         fms_ip: data.fms_ip || '',
-        fms_ext_ip: data.fms_ext_ip,
+        fms_ext_ip: data.fms_ext_ip || null,
         fms_con_id: data.fms_con_id || '',
         fms_passwd: data.fms_passwd || '',
-        fms_port: data.fms_port || 0,
+        fms_port: data.fms_port !== undefined ? Number(data.fms_port) : 0,
         svr_type: data.svr_type || '',
-        alive: data.alive || '',
-        alive_time: data.alive_time,
-        created_at: data.created_at,
-        updated_at: data.updated_at
+        alive: data.alive || 'N',
+        alive_time: data.alive_time || null,
+        json_job: data.json_job || '',
+        json_yn: data.json_yn || 'N'
       }
     },
 
@@ -87,7 +84,9 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
         fms_port: data.fms_port,
         svr_type: data.svr_type,
         alive: data.alive,
-        alive_time: data.alive_time
+        alive_time: data.alive_time,
+        json_job: data.json_job,
+        json_yn: data.json_yn
       }
     },
 
@@ -113,8 +112,8 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
     // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchMediaServers(forceRefresh = false) {
       await this.getHelper().fetchAll(
-        forceRefresh, 
-        5 * 60 * 1000, 
+        forceRefresh,
+        5 * 60 * 1000,
         '미디어 서버 정보 데이터',
         this.getPhpTableName()
       )

@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useAuthStore } from '../stores/auth'
+import { useAuthStore, type AuthUser } from '../stores/auth'
 
 export function useAuth() {
   const authStore = useAuthStore()
@@ -7,12 +7,12 @@ export function useAuth() {
   const isAuthenticated = computed(() => authStore.isAuthenticated)
   const currentUser = computed(() => authStore.currentUser)
 
-  const login = (token: string, user: { id: string; name: string; email: string }) => {
-    authStore.login(token, user)
+  const login = (user: AuthUser) => {
+    authStore.login(user)
   }
 
-  const logout = () => {
-    authStore.logout()
+  const logout = (api?: { post: (url: string) => Promise<unknown> }) => {
+    return authStore.logout(api)
   }
 
   return {

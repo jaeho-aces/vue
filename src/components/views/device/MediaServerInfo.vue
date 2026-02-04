@@ -8,6 +8,7 @@
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
     id-field="fms_id"
+    preference-key="vms_media_server_info"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   >
@@ -31,9 +32,13 @@ import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import Button from '../../common/Button.vue'
 import { useMediaServerInfoStore, type MediaServer } from '../../../stores/mediaServerInfo'
+import { useCommonCodeStore } from '../../../stores/commonCode'
+import { useAlertStore } from '../../../stores/alert'
 
 // Pinia 스토어 사용
 const mediaServerStore = useMediaServerInfoStore()
+const commonCodeStore = useCommonCodeStore()
+const alertStore = useAlertStore()
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // 셀 컴포넌트들
@@ -91,23 +96,60 @@ const StatusCell = defineComponent({
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
-const columnWidths = [150, 130, 100, 120, 120, 120, 120, 120, 180, 140, 120, 120]
+
+const ServerTypeCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number],
+      default: ''
+    }
+  },
+  setup(props) {
+    const mappedName = computed(() => {
+      if (!props.value) return ''
+      return commonCodeStore.getCodeName('C', '11', String(props.value))
+    })
+    return () => h('span', { class: 'text-sm text-slate-700' }, mappedName.value)
+  }
+})
+
+const YesNoCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number, Boolean],
+      default: ''
+    }
+  },
+  setup(props) {
+    const isYes = props.value === 'Y' || props.value === true || props.value === 'true'
+    return () => h('span', {
+      class: [
+        'inline-block px-2 py-0.5 rounded text-xs font-bold',
+        isYes ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+      ]
+    }, isYes ? 'Y' : 'N')
+  }
+})
 
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
-  { id: 'fms_name', header: '미디어 서버 이름', size: columnWidths[0], cellComponent: TextCell },
-  { id: 'fms_ip', header: '미디어 서버 IP', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'fms_ext_ip', header: '외부 IP', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'fms_port', header: 'Port', size: columnWidths[2], cellComponent: TextCell },
-  { id: 'fms_con_id', header: '접속 ID', size: columnWidths[3], cellComponent: TextCell },
-  { id: 'fms_passwd', header: '접속 암호', size: columnWidths[7], cellComponent: TextCell },
-  { id: 'svr_type', header: '서버 종류', size: columnWidths[4], cellComponent: TextCell },
-  { id: 'alive', header: '동작 상태', size: columnWidths[6], cellComponent: StatusCell },
-  { id: 'alive_time', header: '최종 확인 시간', size: columnWidths[9], cellComponent: TextCell }
+  { id: 'fms_id', header: '미디어 서버 구분자', size: 140, cellComponent: TextCell },
+  { id: 'fms_name', header: '미디어 서버 이름', size: 150, cellComponent: TextCell },
+  { id: 'fms_ip', header: '미디어 서버 IP', size: 130, cellComponent: TextCell },
+  { id: 'fms_ext_ip', header: '외부 주소', size: 130, cellComponent: TextCell },
+  { id: 'fms_port', header: '포트 번호', size: 100, cellComponent: TextCell },
+  { id: 'fms_con_id', header: '사용자 ID', size: 120, cellComponent: TextCell },
+  { id: 'svr_type', header: '서버 종류', size: 120, cellComponent: ServerTypeCell },
+  { id: 'alive', header: '동작 여부', size: 100, cellComponent: StatusCell },
+  { id: 'alive_time', header: '최종 확인 시간', size: 180, cellComponent: TextCell },
+  { id: 'json_job', header: 'JSON 가능', size: 120, cellComponent: TextCell },
+  { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell }
 ]
 
 // 기본 표시 컬럼
-const defaultVisibleColumns = ['fms_name', 'fms_ip', 'fms_port', 'svr_type', 'alive', 'alive_time']
+const defaultVisibleColumns = [
+  'fms_id', 'fms_name', 'fms_ip', 'fms_port', 'svr_type', 'alive', 'alive_time'
+]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
 const rawData = computed(() => {
@@ -120,36 +162,18 @@ const rawData = computed(() => {
 
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
 const formFields: FormField[] = [
-  { id: 'fms_id', label: '서버 ID', type: 'text', required: true, placeholder: '예: ms00001' },
-  { id: 'fms_name', label: '미디어 서버 이름', type: 'text', required: true },
-  { id: 'fms_ip', label: '미디어 서버 IP', type: 'text', required: true, placeholder: '예: 172.16.33.180' },
-  { id: 'fms_ext_ip', label: '외부 IP', type: 'text', required: false, placeholder: '예: 192.168.1.151' },
-  { id: 'fms_port', label: 'Port', type: 'number', required: true, placeholder: '예: 1935' },
-  { id: 'fms_con_id', label: '접속 ID', type: 'text', required: false },
-  { id: 'fms_passwd', label: '접속 암호', type: 'text', required: false },
-  { 
-    id: 'svr_type', 
-    label: '서버 종류', 
-    type: 'select', 
-    required: true,
-    options: [
-      { value: 'Streaming', label: 'Streaming' },
-      { value: 'Storage', label: 'Storage' },
-      { value: 'Relay', label: 'Relay' },
-      { value: 'WebRTC', label: 'WebRTC' }
-    ]
-  },
-  { 
-    id: 'alive', 
-    label: '동작 상태', 
-    type: 'select', 
-    required: true,
-    options: [
-      { value: 'Y', label: '정상' },
-      { value: 'N', label: '비활성' }
-    ]
-  },
-  { id: 'alive_time', label: '최종 확인 시간', type: 'text', placeholder: 'YYYY-MM-DD HH:mm:ss' }
+  { id: 'fms_id', label: '미디어 서버 구분자', type: 'text', required: true, placeholder: '예: FMS0000XXXX' },
+  { id: 'fms_name', label: '미디어 서버 이름', type: 'text', required: true, placeholder: '한글/영문' },
+  { id: 'fms_ip', label: '미디어 서버 IP 주소', type: 'text', required: true, placeholder: '예: 172.16.33.180' },
+  { id: 'fms_ext_ip', label: '외부 주소', type: 'text', placeholder: '예: 192.168.1.151' },
+  { id: 'fms_port', label: '서버 포트 번호', type: 'number', placeholder: '0~65535' },
+  { id: 'fms_con_id', label: '사용자 ID', type: 'text' },
+  { id: 'fms_passwd', label: '사용자 암호', type: 'text' }, // 암호화 필드이나 UI에서는 텍스트로 처리
+  { id: 'svr_type', label: '미디어 서버 종류', type: 'text', required: true },
+  { id: 'alive', label: '동작 여부', type: 'text', placeholder: 'Y / N' },
+  { id: 'alive_time', label: '최종 확인 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
+  { id: 'json_job', label: 'JSON 프로토콜 가능 여부', type: 'text' },
+  { id: 'json_yn', label: 'JSON 프로토콜 사용 여부', type: 'text', placeholder: 'Y / N' }
 ]
 
 // 데이터 업데이트 처리 (생성/수정)
@@ -165,10 +189,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     } else {
       await mediaServerStore.updateMediaServer(data.fms_id, data)
     }
+    alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
     const errorMessage = mediaServerStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }
@@ -183,10 +208,11 @@ const handleDataDelete = async (ids: string[]) => {
   try {
     isSubmitting.value = true
     await mediaServerStore.deleteMediaServers(ids)
+    alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
     console.error('데이터 삭제 실패:', error)
     const errorMessage = mediaServerStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
-    alert(errorMessage)
+    alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false
   }

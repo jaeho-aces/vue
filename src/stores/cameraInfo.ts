@@ -1,10 +1,8 @@
 import { defineStore } from 'pinia'
 import { ApiStoreHelper, BaseStoreState } from '../utils/apiStore'
-import { api } from '../services/api'
 
 // 백엔드 스키마와 동일한 타입 (변환 없이 사용)
 export interface Camera {
-  id?: number
   cctv_id: string
   camera_no: string
   hq_code: string
@@ -14,32 +12,16 @@ export interface Camera {
   camera_area: string
   enc_url: string
   trans_wms_port: string
-  link_id_s: string
-  link_id_e: string
-  vlink_id_s?: string
-  vlink_id_e?: string
-  road_id: string
   road_name: string
   milepost: string
-  bound: string
   lat: string
   lng: string
-  fileurl_wmv: string
   fileurl_mp4: string
-  fileurl_img: string
   stat: string
   alive: string
-  alive_yn: string
-  update_date: string | null
-  last_cctv_time: string | null
   hls_url: string
   hls_alive: string
-  hls_duration: string
-  hls_emergency: string
-  ftp_sent_date: string | null
   reg_date: string | null
-  created_at?: string
-  updated_at?: string
 }
 
 interface CameraInfoState {
@@ -60,12 +42,12 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
   getters: {
     // 전체 개수
     totalCount: (state) => state.items.length,
-    
+
     // ID로 찾기
     getById: (state) => (id: string) => {
       return state.items.find(item => item.cctv_id === id)
     },
-    
+
     // 검색
     search: (state) => (query: string) => {
       const lowerQuery = query.toLowerCase()
@@ -85,9 +67,8 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
     // 백엔드 API 응답을 프론트엔드 형식으로 변환
     transformFromAPI(data: any): Camera {
       return {
-        id: data.id,
         cctv_id: data.cctv_id || '',
-        camera_no: data.camera_no || data.camera_no?.toString() || '',
+        camera_no: data.camera_no?.toString() || '',
         hq_code: data.hq_code || '',
         branch_code: data.branch_code || '',
         route_code: data.route_code || '',
@@ -95,32 +76,16 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
         camera_area: data.camera_area || '',
         enc_url: data.enc_url || '',
         trans_wms_port: data.trans_wms_port?.toString() || '',
-        link_id_s: data.link_id_s || '',
-        link_id_e: data.link_id_e || '',
-        vlink_id_s: data.vlink_id_s,
-        vlink_id_e: data.vlink_id_e,
-        road_id: data.road_id || '',
         road_name: data.road_name || '',
         milepost: data.milepost?.toString() || '',
-        bound: data.bound || '',
         lat: data.lat?.toString() || '',
         lng: data.lng?.toString() || '',
-        fileurl_wmv: data.fileurl_wmv || '',
         fileurl_mp4: data.fileurl_mp4 || '',
-        fileurl_img: data.fileurl_img || '',
-        stat: data.stat || '',
-        alive: data.alive || '',
-        alive_yn: data.alive_yn || '',
-        update_date: data.update_date,
-        last_cctv_time: data.last_cctv_time,
+        stat: data.stat || 'N',
+        alive: data.alive || 'N',
         hls_url: data.hls_url || '',
-        hls_alive: data.hls_alive || '',
-        hls_duration: data.hls_duration || '',
-        hls_emergency: data.hls_emergency || '',
-        ftp_sent_date: data.ftp_sent_date,
-        reg_date: data.reg_date,
-        created_at: data.created_at,
-        updated_at: data.updated_at
+        hls_alive: data.hls_alive || 'N',
+        reg_date: data.reg_date || null
       }
     },
 
@@ -136,29 +101,15 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
         camera_area: data.camera_area,
         enc_url: data.enc_url,
         trans_wms_port: data.trans_wms_port,
-        link_id_s: data.link_id_s,
-        link_id_e: data.link_id_e,
-        vlink_id_s: data.vlink_id_s,
-        vlink_id_e: data.vlink_id_e,
-        road_id: data.road_id,
         road_name: data.road_name,
         milepost: data.milepost,
-        bound: data.bound,
         lat: data.lat,
         lng: data.lng,
-        fileurl_wmv: data.fileurl_wmv,
         fileurl_mp4: data.fileurl_mp4,
-        fileurl_img: data.fileurl_img,
         stat: data.stat,
         alive: data.alive,
-        alive_yn: data.alive_yn,
-        update_date: data.update_date,
-        last_cctv_time: data.last_cctv_time,
         hls_url: data.hls_url,
         hls_alive: data.hls_alive,
-        hls_duration: data.hls_duration,
-        hls_emergency: data.hls_emergency,
-        ftp_sent_date: data.ftp_sent_date,
         reg_date: data.reg_date
       }
     },
@@ -185,8 +136,8 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
     // 데이터 목록 가져오기 - PHP 백엔드 사용
     async fetchCameras(forceRefresh = false) {
       await this.getHelper().fetchAll(
-        forceRefresh, 
-        5 * 60 * 1000, 
+        forceRefresh,
+        5 * 60 * 1000,
         '카메라 정보 데이터',
         this.getPhpTableName()
       )

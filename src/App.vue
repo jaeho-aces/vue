@@ -1,22 +1,31 @@
 <template>
   <div id="app">
-    <DashboardPopupView v-if="route.path === '/dashboard-popup'" />
-    <Dashboard2View v-else-if="route.path === '/dashboard2-popup'" />
-    <HomeView v-else-if="navigationStore.currentPage === 'home'" />
-    <Layout v-else />
+    <div v-if="isPopup">
+      <router-view />
+    </div>
+    <div v-else-if="route.path === '/login'">
+      <router-view />
+    </div>
+    <HomeView v-else-if="route.path === '/'" />
+    <Layout v-else>
+      <router-view />
+    </Layout>
+    <AlertModal />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useNavigationStore } from './stores/navigation'
 import HomeView from './components/views/HomeView.vue'
-import DashboardPopupView from './components/views/DashboardPopupView.vue'
-import Dashboard2View from './components/views/Dashboard2View.vue'
 import Layout from './layout/Layout.vue'
+import AlertModal from './components/common/AlertModal.vue'
 
 const route = useRoute()
-const navigationStore = useNavigationStore()
+
+const isPopup = computed(() => {
+  return route.path === '/DashboardPopupView' || route.path === '/Dashboard2View'
+})
 </script>
 
 <style>
