@@ -54,9 +54,3 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 2. **복합 키 지원**: 단일 키 및 복합 키 모두 지원
 3. **PostgreSQL 연결**: asyncpg를 사용한 비동기 데이터베이스 연결
 4. **필드명 자동 변환**: 응답 데이터의 필드명을 소문자로 자동 변환
-
-### PHP와의 호환성
-
-- PHP `get-db-array.php`와 동일한 요청/응답 형식 지원
-- PHP `rest-access-page.php`와 동일한 REST API 인터페이스 제공
-- 기존 Vue.js 프론트엔드와 호환 가능
