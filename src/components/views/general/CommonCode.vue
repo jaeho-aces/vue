@@ -58,6 +58,21 @@ const YesNoCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: { type: [String, Number], default: '' }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 // 기본 컬럼 너비 설정 (그룹 구분 컬럼은 표시하지 않음)
 const checkboxColumnWidth = 50
 const columnWidths = [50, 50, 150, 120, 250, 100, 100, 120]
@@ -71,7 +86,7 @@ const columns: TableColumn[] = [
   { id: 'remarks', header: '설명', size: columnWidths[4], cellComponent: TextCell },
   { id: 'ord', header: '표시 순서', size: columnWidths[5], cellComponent: TextCell },
   { id: 'use_yn', header: '사용 여부', size: columnWidths[6], cellComponent: YesNoCell },
-  { id: 'reg_timestamp', header: '등록 일자', size: columnWidths[7], cellComponent: TextCell }
+  { id: 'reg_timestamp', header: '등록 일자', size: columnWidths[7], cellComponent: DateOnlyCell }
 ]
 
 // 기본 표시 컬럼

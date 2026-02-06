@@ -15,7 +15,6 @@ export interface VideoConversionServer {
   version: string
   build_date: string | null
   start_date: string | null
-  reg_date: string | null
 }
 
 interface VideoConversionServerInfoState {
@@ -68,8 +67,7 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
         json_date: data.json_date || null,
         version: data.version || '',
         build_date: data.build_date || null,
-        start_date: data.start_date || null,
-        reg_date: data.reg_date || null
+        start_date: data.start_date || null
       }
     },
 
@@ -87,8 +85,7 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
         json_date: data.json_date,
         version: data.version,
         build_date: data.build_date,
-        start_date: data.start_date,
-        reg_date: data.reg_date
+        start_date: data.start_date
       }
     },
 

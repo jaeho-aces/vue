@@ -97,7 +97,7 @@ export const useVersionMgtStore = defineStore('versionMgt', {
     },
 
     getPhpTableKey() {
-      return 'KEY'
+      return 'KEY,PRODUCT'
     },
 
     // 데이터 목록 가져오기 - PHP 백엔드 사용
@@ -119,29 +119,46 @@ export const useVersionMgtStore = defineStore('versionMgt', {
       )
     },
 
-    // 데이터 수정 - PHP 백엔드 사용
+    // 데이터 수정 - PHP 백엔드 사용 (복합 키: KEY, PRODUCT)
     async updateVersion(versionId: string, data: Partial<Version>) {
+      // versionId(KEY)와 product_name(PRODUCT)을 조합하여 복합 키 생성
+      const item = this.items.find(item => item.version_id === versionId)
+      const productName = data.product_name || item?.product_name || ''
+      const compositeKey = `${versionId},${productName}`
+      
       return await this.getHelper().update(
-        versionId,
+        compositeKey,
         data,
         this.getPhpTableName(),
         this.getPhpTableKey()
       )
     },
 
-    // 데이터 삭제 - PHP 백엔드 사용
+    // 데이터 삭제 - PHP 백엔드 사용 (복합 키: KEY, PRODUCT)
     async deleteVersion(versionId: string) {
+      // items에서 해당 항목을 찾아 PRODUCT 값을 가져옴
+      const item = this.items.find(item => item.version_id === versionId)
+      if (!item) throw new Error(`버전 ID ${versionId}를 찾을 수 없습니다.`)
+      const compositeKey = `${item.version_id},${item.product_name}`
+      
       await this.getHelper().delete(
-        versionId,
+        compositeKey,
         this.getPhpTableName(),
         this.getPhpTableKey()
       )
     },
 
-    // 여러 개 삭제 - PHP 백엔드 사용
+    // 여러 개 삭제 - PHP 백엔드 사용 (복합 키: KEY, PRODUCT)
     async deleteVersions(versionIds: string[]) {
+      // items에서 각 ID의 PRODUCT를 찾아 복합 키 배열 생성
+      const compositeKeys = versionIds.map(id => {
+        const item = this.items.find(item => item.version_id === id)
+        if (!item) throw new Error(`버전 ID ${id}를 찾을 수 없습니다.`)
+        return `${item.version_id},${item.product_name}`
+      })
+      
       await this.getHelper().deleteMany(
-        versionIds,
+        compositeKeys,
         this.getPhpTableName(),
         this.getPhpTableKey()
       )

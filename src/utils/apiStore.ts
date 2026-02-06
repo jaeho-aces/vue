@@ -282,9 +282,11 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
       await Promise.all(deletePromises)
       
       const keyField = tableKey || 'id'
-      this.state.items = this.state.items.filter(
-        item => !ids.includes((item as any)[keyField])
-      )
+      const keyLower = keyField.toLowerCase()
+      this.state.items = this.state.items.filter(item => {
+        const idVal = (item as any)[keyField] ?? (item as any)[keyLower]
+        return !ids.includes(idVal)
+      })
       this.state.lastFetched = Date.now()
       
       console.log('데이터 삭제 완료:', ids.length, '개')

@@ -6,9 +6,11 @@ import { viteSingleFile } from 'vite-plugin-singlefile'
 export default defineConfig(({ mode }) => {
   // 환경 변수 로드
   const env = loadEnv(mode, process.cwd(), '')
+  // 기본 빌드: 분리된 JS/CSS (운영 배포·캐싱에 유리). 단일 HTML은 npm run build:single
+  const singleFile = mode === 'singlefile'
 
   return {
-    plugins: [vue(), tailwindcss(), viteSingleFile()],
+    plugins: [vue(), tailwindcss(), ...(singleFile ? [viteSingleFile()] : [])],
     base: './',
     server: {
       port: 5173,

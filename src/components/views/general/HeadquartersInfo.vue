@@ -55,6 +55,21 @@ const YesNoCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: { type: [String, Number], default: '' }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 interface Headquarters {
   id: string
   code: string
@@ -78,7 +93,7 @@ const columns: TableColumn[] = [
   { id: 'description', header: '설명', size: columnWidths[3], cellComponent: TextCell },
   { id: 'sortOrder', header: '표시 순서', size: columnWidths[4], cellComponent: TextCell },
   { id: 'useYn', header: '사용 여부', size: columnWidths[5], cellComponent: YesNoCell },
-  { id: 'registered', header: '등록 일자', size: columnWidths[6], cellComponent: TextCell }
+  { id: 'registered', header: '등록 일자', size: columnWidths[6], cellComponent: DateOnlyCell }
 ]
 
 // 기본 표시 컬럼

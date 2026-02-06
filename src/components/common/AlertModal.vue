@@ -1,236 +1,184 @@
 <template>
   <Teleport to="body">
-    <Transition name="modal">
-      <div
-        v-if="alertStore.visible"
-        class="modal-overlay"
-        @mousedown.self="mousedownOnOverlay = true"
-        @mouseup.self="handleOverlayMouseUp"
-      >
-        <div class="modal-container" @mousedown.stop @click.stop>
-          <div class="modal-header" :class="headerClass">
-            <span class="modal-icon" :class="iconClass">{{ iconText }}</span>
-            <h2 class="modal-title">{{ titleText }}</h2>
-            <button class="modal-close-button" @click="handleClose" aria-label="닫기">×</button>
+    <div class="toast-container">
+      <TransitionGroup name="toast">
+        <div
+          v-for="toast in alertStore.toasts"
+          :key="toast.id"
+          class="toast"
+          :class="`toast-${toast.type}`"
+          @click="alertStore.remove(toast.id)"
+        >
+          <div class="toast-icon" :class="`icon-${toast.type}`">
+            {{ getIcon(toast.type) }}
           </div>
-          <div class="modal-body">
-            <p class="modal-message">{{ alertStore.message }}</p>
+          <div class="toast-content">
+            <p class="toast-message">{{ toast.message }}</p>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="confirm-button" @click="handleClose">확인</button>
-          </div>
+          <button
+            class="toast-close"
+            @click.stop="alertStore.remove(toast.id)"
+            aria-label="닫기"
+          >
+            ×
+          </button>
         </div>
-      </div>
-    </Transition>
+      </TransitionGroup>
+    </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import { useAlertStore } from '../../stores/alert'
+import type { AlertType } from '../../stores/alert'
 
 const alertStore = useAlertStore()
 
-const mousedownOnOverlay = ref(false)
-const handleOverlayMouseUp = () => {
-  if (mousedownOnOverlay.value) alertStore.close()
-  mousedownOnOverlay.value = false
-}
-
-const handleClose = () => {
-  alertStore.close()
-}
-
-const headerClass = computed(() => `header-${alertStore.type}`)
-const iconClass = computed(() => `icon-${alertStore.type}`)
-
-const iconText = computed(() => {
-  switch (alertStore.type) {
+function getIcon(type: AlertType): string {
+  switch (type) {
     case 'success': return '✓'
-    case 'error': return '!'
+    case 'error': return '✕'
     case 'warning': return '⚠'
-    default: return 'i'
+    default: return 'ℹ'
   }
-})
-
-const titleText = computed(() => {
-  switch (alertStore.type) {
-    case 'success': return '알림'
-    case 'error': return '오류'
-    case 'warning': return '경고'
-    default: return '알림'
-  }
-})
+}
 </script>
 
 <style scoped>
-.modal-overlay {
+.toast-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 20px;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
 }
 
-.modal-container {
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 420px;
-  overflow: hidden;
-}
-
-.modal-header {
+.toast {
+  pointer-events: auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #e2e8f0;
+  min-width: 320px;
+  max-width: 480px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.modal-header.header-info {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+.toast:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
 }
 
-.modal-header.header-success {
-  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+.toast-success {
+  border-left: 4px solid #22c55e;
 }
 
-.modal-header.header-error {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+.toast-error {
+  border-left: 4px solid #ef4444;
 }
 
-.modal-header.header-warning {
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+.toast-warning {
+  border-left: 4px solid #f59e0b;
 }
 
-.modal-icon {
-  width: 36px;
-  height: 36px;
+.toast-info {
+  border-left: 4px solid #3b82f6;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   flex-shrink: 0;
 }
 
-.modal-icon.icon-info {
-  background: #0ea5e9;
-  color: #fff;
+.toast-icon.icon-success {
+  background: #dcfce7;
+  color: #22c55e;
 }
 
-.modal-icon.icon-success {
-  background: #22c55e;
-  color: #fff;
+.toast-icon.icon-error {
+  background: #fee2e2;
+  color: #ef4444;
 }
 
-.modal-icon.icon-error {
-  background: #ef4444;
-  color: #fff;
+.toast-icon.icon-warning {
+  background: #fef3c7;
+  color: #f59e0b;
 }
 
-.modal-icon.icon-warning {
-  background: #f59e0b;
-  color: #fff;
+.toast-icon.icon-info {
+  background: #dbeafe;
+  color: #3b82f6;
 }
 
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
+.toast-content {
   flex: 1;
+  min-width: 0;
 }
 
-.modal-close-button {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.modal-close-button:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  color: #1e293b;
-}
-
-.modal-body {
-  padding: 24px 20px;
-}
-
-.modal-message {
+.toast-message {
   margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: #334155;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #1e293b;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.modal-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.confirm-button {
-  min-width: 88px;
-  padding: 10px 20px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  color: #fff;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+.toast-close {
+  background: none;
   border: none;
-  border-radius: 8px;
+  font-size: 1.25rem;
+  color: #94a3b8;
   cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
   transition: all 0.2s;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  flex-shrink: 0;
 }
 
-.confirm-button:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+.toast-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #64748b;
 }
 
-.confirm-button:active {
-  transform: scale(0.98);
+.toast-enter-active {
+  transition: all 0.3s ease;
 }
 
-/* 트랜지션 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
+.toast-leave-active {
+  transition: all 0.2s ease;
 }
-.modal-enter-from,
-.modal-leave-to {
+
+.toast-enter-from {
   opacity: 0;
+  transform: translateX(100%);
 }
-.modal-enter-active .modal-container,
-.modal-leave-active .modal-container {
-  transition: transform 0.2s ease;
+
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(50%) scale(0.8);
 }
-.modal-enter-from .modal-container,
-.modal-leave-to .modal-container {
-  transform: scale(0.95);
+
+.toast-move {
+  transition: transform 0.3s ease;
 }
 </style>

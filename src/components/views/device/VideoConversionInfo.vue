@@ -146,6 +146,24 @@ const YesNoCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number],
+      default: ''
+    }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 // 기본 컬럼 너비 설정
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
@@ -164,9 +182,9 @@ const columns: TableColumn[] = [
   { id: 'ch_vfps', header: 'FPS', size: 80, cellComponent: TextCell },
   { id: 'ch_vkpbs', header: 'BPS', size: 100, cellComponent: TextCell },
   { id: 'ch_alive', header: '동작여부', size: 80, cellComponent: StatusCell },
-  { id: 'ch_alive_time', header: '최종 확인 시간', size: 160, cellComponent: TextCell },
+  { id: 'ch_alive_time', header: '최종 확인 시간', size: 160, cellComponent: DateOnlyCell },
   { id: 'ch_alive_yn', header: '동작 확인 여부', size: 100, cellComponent: YesNoCell },
-  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: TextCell },
+  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: DateOnlyCell },
   { id: 'job_status', header: '동작 상태', size: 100, cellComponent: TextCell },
   { id: 'json_job', header: 'JSON 작업', size: 100, cellComponent: YesNoCell },
   { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell },

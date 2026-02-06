@@ -2,6 +2,8 @@
 계정/인증 관련 로직: 넌스 발급·검증, 비밀번호 bcrypt 해시.
 passlib 대신 bcrypt 패키지를 직접 사용 (passlib과 bcrypt 4.1+ 호환 이슈 회피).
 토큰은 httpOnly 쿠키로 전달 (XSS로부터 토큰 탈취 방지).
+로그인: 클라이언트가 SHA-256(평문) 전송 → 서버는 DB의 bcrypt(SHA-256(평문))와 비교.
+사용자 생성/수정 시 클라이언트가 이미 SHA-256(평문)을 보내므로 bcrypt만 적용해 저장.
 """
 import os
 import secrets
@@ -58,8 +60,8 @@ def consume_nonce(nonce: str) -> bool:
 def process_mgmt_user_password_body(body: dict, table_name: str) -> None:
     """
     MGMT_USER 테이블에 대한 POST/PUT body에서 비밀번호가 있으면
-    넌스 검증, bcrypt 해시 적용, nonce 키 제거. body를 직접 수정한다.
-    조건에 해당하지 않으면 아무 작업도 하지 않는다.
+    넌스 검증 후 bcrypt(SHA-256(평문)) 저장(로그인 검증과 동일), nonce 키 제거.
+    body를 직접 수정한다. 조건에 해당하지 않으면 아무 작업도 하지 않는다.
     """
     if str(table_name).upper() != "MGMT_USER":
         return
@@ -72,6 +74,7 @@ def process_mgmt_user_password_body(body: dict, table_name: str) -> None:
     if not consume_nonce(str(nonce)):
         raise HTTPException(status_code=400, detail="Invalid or expired nonce")
     pw_key = body_lower["password"]
+    # 클라이언트가 이미 SHA-256(평문)을 보내므로 그대로 bcrypt만 적용 (로그인 검증과 일치)
     body[pw_key] = hash_password(str(body[pw_key]))
     for k in list(body.keys()):
         if str(k).lower() == "nonce":
@@ -120,7 +123,12 @@ def register_auth_routes(app):
         로그인. Body: { user_id, password, nonce }
         password는 클라이언트에서 SHA-256 해시한 hex 문자열.
         """
-        body = await request.json()
+        import logging
+        try:
+            body = await request.json()
+        except Exception as e:
+            logging.warning("login: request body parse failed: %s", e)
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
         user_id = (body.get("user_id") or body.get("USER_ID") or "").strip()
         password = body.get("password") or body.get("PASSWORD")
         nonce = body.get("nonce") or body.get("NONCE")
@@ -137,13 +145,17 @@ def register_auth_routes(app):
         from psycopg.rows import dict_row
         if not db_pool:
             raise HTTPException(status_code=503, detail="Database not available")
-        async with db_pool.connection() as conn:
-            async with conn.cursor(row_factory=dict_row) as cur:
-                await cur.execute(
-                    'SELECT user_id, user_name, email, password FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)',
-                    (user_id,),
-                )
-                row = await cur.fetchone()
+        try:
+            async with db_pool.connection() as conn:
+                async with conn.cursor(row_factory=dict_row) as cur:
+                    await cur.execute(
+                        'SELECT user_id, user_name, email, password FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)',
+                        (user_id,),
+                    )
+                    row = await cur.fetchone()
+        except Exception as e:
+            logging.exception("login: database error for user_id=%s: %s", user_id, e)
+            raise HTTPException(status_code=503, detail="Database error")
         if not row:
             raise HTTPException(status_code=401, detail="Invalid user_id or password")
         stored_hash = (row.get("password") or row.get("PASSWORD") or "").strip()

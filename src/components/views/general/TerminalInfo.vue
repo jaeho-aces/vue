@@ -6,8 +6,8 @@
     :form-fields="formFields"
     modal-title="운영단말"
     :checkbox-column-width="checkboxColumnWidth"
-    :id-column-width="0"
     id-field="key"
+    :hide-id-column="true"
     preference-key="vms_terminal_info"
     @update="handleDataUpdate"
     @delete="handleDataDelete"
@@ -36,6 +36,24 @@ const TextCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number],
+      default: ''
+    }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 interface Terminal {
   key: string
   name: string
@@ -51,7 +69,7 @@ const columnWidths = [200, 200, 200]
 const columns: TableColumn[] = [
   { id: 'name', header: '운영 단말 이름', size: columnWidths[0], cellComponent: TextCell },
   { id: 'ip', header: '단말기 IP 주소', size: columnWidths[1], cellComponent: TextCell },
-  { id: 'regDate', header: '등록일시', size: columnWidths[2], cellComponent: TextCell }
+  { id: 'regDate', header: '등록일자', size: columnWidths[2], cellComponent: DateOnlyCell }
 ]
 
 // 기본 표시 컬럼
@@ -65,12 +83,11 @@ const loadTerminalData = async () => {
   try {
     const response = await api.get('/api/rest-access-page/MGMT_OPER_TERMINAL')
     
-    // DB 필드명: key, term_name, ip_addr, reg_date
     const transformedData: Terminal[] = response.data.map((item: any) => ({
       key: item.key,
       name: item.term_name || '',
       ip: item.ip_addr || '',
-      regDate: item.reg_date || ''
+      regDate: toDateOnly(item.reg_date)
     }))
     
     rawData.value = transformedData
@@ -80,14 +97,22 @@ const loadTerminalData = async () => {
   }
 }
 
+// 현재 날짜를 DB 저장/표시용 형식으로 반환 (YYYY-MM-DD)
+function nowAsRegDate(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
     // Terminal 데이터를 MGMT_OPER_TERMINAL 형식으로 변환
     const mgmtTerminalData: any = {
       term_name: data.name || '',
-      ip_addr: data.ip || '',
-      // reg_date는 백엔드에서 처리하거나 필요시 추가
+      ip_addr: data.ip || ''
     }
     
     if (isNew) {
@@ -99,6 +124,7 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
         return `TERM_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`
       }
       mgmtTerminalData.key = generateKey()
+      mgmtTerminalData.reg_date = nowAsRegDate()
       await api.post('/api/rest-access-page/MGMT_OPER_TERMINAL', mgmtTerminalData)
     } else {
       // 수정 (key를 식별자로 사용)
@@ -147,7 +173,7 @@ onMounted(() => {
 const formFields: FormField[] = [
   { id: 'key', label: '', type: 'hidden' },
   { id: 'name', label: '운영 단말 이름', type: 'text', required: true, placeholder: '예: 운영단말-01' },
-  { id: 'ip', label: '단말기 IP 주소', type: 'ip', required: true, placeholder: '예: 192.168.1.100', pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$', patternMessage: '단말기 IP 주소는 0.0.0.0 ~ 255.255.255.255 형식으로 입력해 주세요.' }
+  { id: 'ip', label: '단말기 IP 주소', type: 'ip', required: true, placeholder: '', pattern: '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$', patternMessage: '단말기 IP 주소는 0.0.0.0 ~ 255.255.255.255 형식으로 입력해 주세요.' }
 ]
 </script>
 

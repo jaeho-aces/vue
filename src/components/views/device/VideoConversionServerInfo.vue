@@ -97,6 +97,24 @@ const YesNoCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number, Boolean],
+      default: ''
+    }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 // VideoConversionServer 인터페이스는 stores/videoConversionServerInfo.ts에서 import하므로 여기서는 제거
 
 // 기본 컬럼 너비 설정
@@ -105,24 +123,23 @@ const idColumnWidth = 150
 
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
-  { id: 'trans_id', header: '서버 구분자', size: 120, cellComponent: TextCell },
+  { id: 'trans_id', header: '서버 ID', size: 120, cellComponent: TextCell },
   { id: 'trans_name', header: '서버 이름', size: 150, cellComponent: TextCell },
   { id: 'trans_ip', header: '서버 IP 주소', size: 130, cellComponent: TextCell },
   { id: 'trans_port', header: '통신 포트 번호', size: 120, cellComponent: TextCell },
   { id: 'alive', header: '동작 여부', size: 100, cellComponent: StatusCell },
-  { id: 'alive_time', header: '마지막 동작 시간', size: 180, cellComponent: TextCell },
+  { id: 'alive_time', header: '마지막 동작 시간', size: 180, cellComponent: DateOnlyCell },
   { id: 'json_job', header: 'JSON 처리', size: 120, cellComponent: TextCell },
   { id: 'json_yn', header: 'JSON 사용 여부', size: 100, cellComponent: YesNoCell },
-  { id: 'json_date', header: '마지막 명령 일자', size: 160, cellComponent: TextCell },
+  { id: 'json_date', header: '마지막 명령 일자', size: 160, cellComponent: DateOnlyCell },
   { id: 'version', header: '서버 버전', size: 120, cellComponent: TextCell },
-  { id: 'build_date', header: '파일 생성 일자', size: 160, cellComponent: TextCell },
-  { id: 'start_date', header: '서버 시작 시간', size: 160, cellComponent: TextCell },
-  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: TextCell }
+  { id: 'build_date', header: '파일 생성 일자', size: 160, cellComponent: DateOnlyCell },
+  { id: 'start_date', header: '서버 시작 시간', size: 160, cellComponent: DateOnlyCell }
 ]
 
 // 기본 표시 컬럼
 const defaultVisibleColumns = [
-  'trans_id', 'trans_name', 'trans_ip', 'alive', 'version', 'reg_date'
+  'trans_id', 'trans_name', 'trans_ip', 'alive', 'version', 'start_date'
 ]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
@@ -134,21 +151,12 @@ const rawData = computed(() => {
   return videoConversionServerStore.items
 })
 
-// 폼 필드 정의 (백엔드 스키마에 맞춤)
+// 폼 필드 정의: 서버 ID(신규 시 TR0000+입력값으로 DB 저장), 서버 이름, 서버 IP 주소, 통신 포트 번호만 입력.
 const formFields: FormField[] = [
-  { id: 'trans_id', label: '서버 구분자', type: 'text', required: true, placeholder: '예: TR0000XXXX' },
-  { id: 'trans_name', label: '서버 이름', type: 'text', required: true, placeholder: '한글 / 영문' },
-  { id: 'trans_ip', label: '서버 IP 주소', type: 'text', required: true, placeholder: 'A.B.C.D (0~255)' },
-  { id: 'trans_port', label: '통신 포트 번호', type: 'number', required: true, placeholder: '0~65535' },
-  { id: 'alive', label: '동작 여부', type: 'text', placeholder: 'Y / N' },
-  { id: 'alive_time', label: '마지막 동작 확인 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
-  { id: 'json_job', label: 'JSON 처리', type: 'text', required: true, placeholder: '한글 / 영문' },
-  { id: 'json_yn', label: 'JSON 사용 여부', type: 'text', required: true, placeholder: 'Y / N' },
-  { id: 'json_date', label: '마지막 명령 처리 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
-  { id: 'version', label: '서버 버전', type: 'text', placeholder: '한글 / 영문' },
-  { id: 'build_date', label: '실행 파일 생성 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
-  { id: 'start_date', label: '서버 실행 시작 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
-  { id: 'reg_date', label: '등록 일자', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' }
+  { id: 'trans_id', label: '서버 ID', type: 'id', required: true, placeholder: '숫자 4자리', maxLength: 4, pattern: '^[0-9]{1,4}$', patternMessage: '숫자 4자리 이하로 입력 가능합니다.' },
+  { id: 'trans_name', label: '서버 이름', type: 'text', required: true, placeholder: '' },
+  { id: 'trans_ip', label: 'IP 주소', type: 'ip', required: true, placeholder: '' },
+  { id: 'trans_port', label: '포트 번호', type: 'number', required: true, placeholder: '0~65535', min: 0, max: 65535, maxLength: 5 }
 ]
 
 // 데이터 업데이트 처리 (생성/수정)
@@ -160,14 +168,36 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
     isSubmitting.value = true
     if (isNew) {
-      await videoConversionServerStore.createVideoConversionServer(data as VideoConversionServer)
+      const serverIdPart = String(data.trans_id || '').trim()
+      const payload = {
+        ...data,
+        trans_id: 'TR0000' + serverIdPart
+      }
+      await videoConversionServerStore.createVideoConversionServer(payload as VideoConversionServer)
     } else {
       await videoConversionServerStore.updateVideoConversionServer(data.trans_id, data)
     }
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
   } catch (error: any) {
     console.error('데이터 저장 실패:', error)
-    const errorMessage = videoConversionServerStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
+    const detail = error.response?.data?.detail || videoConversionServerStore.error || ''
+    const detailText = typeof detail === 'string'
+      ? detail
+      : Array.isArray(detail)
+        ? detail.map((d: any) => d?.msg ?? d).join(', ')
+        : (detail?.message ?? '')
+    const lower = detailText.toLowerCase()
+    const isDuplicate = lower.includes('duplicate')
+      || lower.includes('already exists')
+      || lower.includes('conditionalcheckfailed')
+      || lower.includes('key must have')
+      || lower.includes('unique')
+      || detailText.includes('고유 제약')
+      || detailText.includes('키가 이미 있습니다')
+      || detailText.includes('이미 있습니다')
+    const errorMessage = isDuplicate
+      ? '이미 존재하는 서버 ID입니다. 다른 값을 입력해주세요.'
+      : (detailText || '데이터 저장 중 오류가 발생했습니다.')
     alertStore.show(errorMessage, 'error')
   } finally {
     isSubmitting.value = false

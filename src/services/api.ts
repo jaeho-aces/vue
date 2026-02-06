@@ -149,15 +149,23 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     // 상세 에러 로깅
     const fullURL = error.config ? `${error.config.baseURL || ''}${error.config.url || ''}` : 'Unknown URL'
-    
+    const requestUrl = error.config?.url ?? ''
+    const isAuthMe = /\/api\/auth\/me\/?$/.test(requestUrl)
+    const status = error.response?.status
+
+    // /api/auth/me 401 = 세션 확인 중 '로그인 안 됨' 정상 응답 → 콘솔 에러 생략
+    if (isAuthMe && status === 401) {
+      return Promise.reject(error)
+    }
+
     console.group(`[API Error] ${error.config?.method?.toUpperCase() || 'UNKNOWN'} ${fullURL}`)
     
     if (error.response) {
       // 서버 응답이 있는 경우
-      const status = error.response.status
+      const responseStatus = error.response.status
       const data = error.response.data as any
       
-      console.error('Status:', status, error.response.statusText)
+      console.error('Status:', responseStatus, error.response.statusText)
       console.error('Response Headers:', error.response.headers)
       console.error('Response Data:', data)
       console.error('Request Config:', {
@@ -168,20 +176,20 @@ apiClient.interceptors.response.use(
         data: error.config?.data
       })
       
-      // 401 Unauthorized - 인증 실패
-      if (status === 401) {
+      // 401 Unauthorized - 인증 실패 (auth/me 제외, 위에서 이미 처리)
+      if (responseStatus === 401) {
         console.error('❌ 인증 실패: 로그인이 필요합니다.')
         const authStore = useAuthStore()
         authStore.logout()
       }
       
       // 403 Forbidden - 권한 없음
-      if (status === 403) {
+      if (responseStatus === 403) {
         console.error('❌ 접근 권한이 없습니다.')
       }
       
       // 404 Not Found
-      if (status === 404) {
+      if (responseStatus === 404) {
         console.error('❌ 요청한 리소스를 찾을 수 없습니다.')
         console.error('확인 사항:')
         console.error('1. 백엔드 서버가 실행 중인지 확인')
@@ -190,7 +198,7 @@ apiClient.interceptors.response.use(
       }
       
       // 500 Internal Server Error
-      if (status >= 500) {
+      if (responseStatus >= 500) {
         console.error('❌ 서버 오류가 발생했습니다.')
       }
     } else if (error.request) {

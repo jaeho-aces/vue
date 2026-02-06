@@ -123,8 +123,6 @@ router.push('/')
 
 ### 3.3 백엔드
 
-| 구분 | 파일 | 설명 |
-|------|------|------|
 1. REST 라우트 (`backend/database.py`)
  - `rest_access_post`, `rest_access_put` 등록. MGMT_USER일 때 `process_mgmt_user_password_body` 호출
 
@@ -153,7 +151,15 @@ DB에는 **bcrypt 해시 문자열**만 저장됩니다. 컬럼은 기존 `PASSW
 
 ---
 
-## 5. 참고 사항
+## 5. 로그인이 안 될 때 (401 / Invalid user_id or password)
+
+- **사용자 계정 생성 경로**: 로그인 시 서버는 DB에 저장된 값을 `bcrypt(클라이언트가 보낸 SHA-256(비밀번호))`와 비교합니다. 따라서 **반드시 관리 화면(사용자 계정)에서 생성·수정한 계정**으로 로그인해야 합니다. SQL로 직접 넣은 계정이면 비밀번호가 `bcrypt(평문)` 형태일 수 있어 401이 납니다.
+- **조치**: 로그인에 쓸 계정을 **설정 > 사용자 계정**에서 새로 만들거나, 기존 계정의 비밀번호를 한 번 수정(동일 비밀번호로 재저장)해 두세요. 그러면 DB에 `bcrypt(SHA-256(비밀번호))` 형태로 저장되어 로그인이 됩니다.
+- **쿠키**: 프론트(nginx 80)와 API(8000)가 포트만 다를 뿐 같은 호스트라면, 로그인 응답의 `Set-Cookie`는 해당 호스트로 저장되고 이후 API 요청에 포함됩니다. CORS에 `credentials: true`와 서버 `allow_credentials=True`, `CORS_ORIGINS`에 프론트 출처가 포함돼 있는지 확인하세요.
+
+---
+
+## 6. 참고 사항
 
 - **HTTPS**: 운영 환경에서는 반드시 HTTPS 사용을 권장합니다. 넌스와 클라이언트 해시는 전송 구간 보안을 대체하지 않습니다.
 - **httpOnly 쿠키**: 토큰은 응답 헤더 Set-Cookie로만 전달되며, JavaScript에서 읽을 수 없어 XSS로 토큰 탈취 위험을 줄입니다. 쿠키 유효 기간은 7일(`AUTH_COOKIE_MAX_AGE`). 운영 시 `AUTH_COOKIE_SECURE=true`로 설정해 HTTPS에서만 쿠키 전송을 권장합니다.

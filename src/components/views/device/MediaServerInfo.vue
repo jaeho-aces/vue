@@ -131,6 +131,24 @@ const YesNoCell = defineComponent({
   }
 })
 
+function toDateOnly(value: unknown): string {
+  if (value == null || value === '') return ''
+  const s = String(value).trim()
+  return s.length >= 10 ? s.slice(0, 10) : s
+}
+
+const DateOnlyCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number],
+      default: ''
+    }
+  },
+  setup(props) {
+    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
+  }
+})
+
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
   { id: 'fms_id', header: '미디어 서버 구분자', size: 140, cellComponent: TextCell },
@@ -141,7 +159,7 @@ const columns: TableColumn[] = [
   { id: 'fms_con_id', header: '사용자 ID', size: 120, cellComponent: TextCell },
   { id: 'svr_type', header: '서버 종류', size: 120, cellComponent: ServerTypeCell },
   { id: 'alive', header: '동작 여부', size: 100, cellComponent: StatusCell },
-  { id: 'alive_time', header: '최종 확인 시간', size: 180, cellComponent: TextCell },
+  { id: 'alive_time', header: '최종 확인 시간', size: 180, cellComponent: DateOnlyCell },
   { id: 'json_job', header: 'JSON 가능', size: 120, cellComponent: TextCell },
   { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell }
 ]

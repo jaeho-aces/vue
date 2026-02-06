@@ -12,8 +12,7 @@ load_dotenv()
 
 # 프로메테우스 서버 URL 설정
 PROMETHEUS_URL = os.getenv(
-    "PROMETHEUS_URL",
-    "http://localhost:9090"
+    "PROMETHEUS_URL"
 )
 
 # 프로메테우스 HTTP 클라이언트 (재사용)

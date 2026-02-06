@@ -192,7 +192,7 @@ const formFields: FormField[] = [
   { id: 'userId', label: '사용자 ID', type: 'text', required: true, placeholder: '' },
   { id: 'name', label: '사용자 이름', type: 'text', required: true, placeholder: '' },
   { id: 'password', label: '암호', type: 'password', required: false, placeholder: '신규: 필수, 수정: 변경 시만 입력' },
-  { id: 'groupName', label: '그룹', type: 'toggle', required: false, options: [{ value: 'user', label: 'user' }, { value: 'admin', label: 'admin' }] },
+  { id: 'groupName', label: '그룹', type: 'toggle', required: false, options: [{ value: 'user', label: 'User' }, { value: 'admin', label: 'Admin' }] },
   { id: 'email', label: 'Email', type: 'text', required: false, placeholder: '예: user@example.com', maxLength: 100, pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', patternMessage: '올바른 이메일 형식으로 입력해 주세요.' },
   { id: 'phone', label: '전화 번호', type: 'text', required: false, placeholder: '예: 010-1234-5678', maxLength: 64, pattern: '^[0-9\\s-()+]*$', patternMessage: '숫자, 공백, 하이픈(-), 괄호만 입력 가능합니다.' },
   { id: 'canSendSms', label: 'SMS 전송 허용', type: 'yesno', required: false },

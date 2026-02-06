@@ -7,15 +7,15 @@
         @mousedown.self="mousedownOnOverlay = true"
         @mouseup.self="handleOverlayMouseUp"
       >
-        <div class="modal-container" @mousedown.stop>
+        <div class="modal-container" :class="{ 'modal-container--large': size === 'large' }" @mousedown.stop>
           <div class="modal-header">
             <h2 class="modal-title">{{ isEditMode ? '수정' : '신규' }} {{ title }}</h2>
             <button class="modal-close-button" @click="handleClose">×</button>
           </div>
           
-          <div class="modal-body">
+          <div class="modal-body" :class="{ 'modal-body--large': size === 'large' }">
             <!-- 모달이 열릴 때마다 formKey로 폼을 새로 그려서 v-model 바인딩이 깨지는 현상 방지 -->
-            <form :key="formKey" @submit.prevent="handleSubmit" class="form-container">
+            <form :key="formKey" @submit.prevent="handleSubmit" class="form-container" :class="{ 'form-container--large': size === 'large' }">
               <template v-for="field in fields" :key="field.id">
                 <!-- 숨김 필드: 레이블 없이 input만 -->
                 <input
@@ -24,11 +24,19 @@
                   :id="field.id"
                   v-model="formData[field.id]"
                 />
-                <div v-else class="form-field">
+                <div
+                  v-else
+                  class="form-field"
+                  :class="{
+                    'form-field--wide':
+                      size === 'large' && ['enc_url', 'hls_url', 'public_url'].includes(field.id)
+                  }"
+                >
                 <label :for="field.id" class="form-label">
-                  {{ field.label }}
-                  <span v-if="field.required" class="required-mark">*</span>
+                  {{ field.label ?? '' }}
+                  <span v-if="field.required" class="form-label-required">*</span>
                 </label>
+                <p v-if="field.hint" class="form-hint">{{ field.hint }}</p>
                 
                 <!-- 숫자(2자리 등 자릿수 제한): text + inputmode numeric + maxlength -->
                 <input
@@ -40,26 +48,47 @@
                   :placeholder="field.placeholder || ''"
                   :required="field.required"
                   :readonly="field.readonlyInEdit && isEditMode"
+                  :disabled="isFieldDisabled(field)"
                   :maxlength="field.maxLength"
-                  class="form-input"
+                  :class="['form-input', { 'form-input--required': field.required, 'form-input--error': isRequiredEmpty(field) }]"
                 />
-                <!-- IP 전용 입력: 숫자·점만 허용, keydown/paste 차단 -->
-                <input
+                <!-- IP 전용 입력 (255.255.255.255 형식) -->
+                <IpInput
                   v-else-if="field.type === 'ip'"
                   :id="field.id"
-                  type="text"
-                  :value="formData[field.id]"
-                  @input="(e) => { formData[field.id] = filterIpInput((e.target as HTMLInputElement).value) }"
-                  @keydown="handleIpKeydown"
-                  @paste="handleIpPaste(field.id, $event)"
+                  v-model="formData[field.id]"
                   :placeholder="field.placeholder || ''"
                   :required="field.required"
-                  :readonly="field.readonlyInEdit && isEditMode"
-                  maxlength="15"
-                  :pattern="field.pattern"
-                  class="form-input"
+                  :readonly="!!(field.readonlyInEdit && isEditMode)"
+                  :disabled="isFieldDisabled(field)"
+                  :input-class="inputClassFor(field)"
                 />
-                <!-- 텍스트/숫자/암호 입력 -->
+                <!-- ID 전용 입력 (숫자 4자리 등) -->
+                <IdInput
+                  v-else-if="field.type === 'id'"
+                  :id="field.id"
+                  v-model="formData[field.id]"
+                  :placeholder="field.placeholder || ''"
+                  :required="field.required"
+                  :readonly="!!(field.readonlyInEdit && isEditMode)"
+                  :disabled="isFieldDisabled(field)"
+                  :input-class="inputClassFor(field)"
+                  :max-length="field.maxLength ?? 4"
+                />
+                <!-- 숫자 범위 입력 (포트 등 min/max 제한) -->
+                <PortInput
+                  v-else-if="field.type === 'number' && (field.min != null || field.max != null)"
+                  :id="field.id"
+                  v-model="formData[field.id]"
+                  :min="field.min ?? 0"
+                  :max="field.max ?? 65535"
+                  :placeholder="field.placeholder || ''"
+                  :required="field.required"
+                  :readonly="!!(field.readonlyInEdit && isEditMode)"
+                  :disabled="isFieldDisabled(field)"
+                  :input-class="inputClassFor(field)"
+                />
+                <!-- 텍스트/숫자/암호 입력 (number일 때 min/max 없음) -->
                 <input
                   v-else-if="field.type === 'text' || field.type === 'number' || field.type === 'password'"
                   :id="field.id"
@@ -68,23 +97,26 @@
                   :placeholder="field.placeholder || ''"
                   :required="field.required"
                   :readonly="field.readonlyInEdit && isEditMode"
+                  :disabled="isFieldDisabled(field)"
+                  :min="field.type === 'number' && field.min != null ? field.min : undefined"
+                  :max="field.type === 'number' && field.max != null ? field.max : undefined"
                   :maxlength="field.type !== 'number' && field.maxLength ? field.maxLength : undefined"
                   :pattern="field.pattern"
-                  class="form-input"
+                  :class="['form-input', { 'form-input--required': field.required, 'form-input--error': isRequiredEmpty(field) }]"
                 />
                 
-                <!-- 셀렉트 -->
+                <!-- 셀렉트 (options는 배열 또는 formData 기반 함수) -->
                 <select
                   v-else-if="field.type === 'select'"
                   :id="field.id"
                   v-model="formData[field.id]"
                   :required="field.required"
-                  :disabled="field.readonlyInEdit && isEditMode"
-                  class="form-select"
+                  :disabled="(field.readonlyInEdit && isEditMode) || isFieldDisabled(field)"
+                  :class="['form-select', { 'form-select--required': field.required, 'form-select--error': isRequiredEmpty(field) }]"
                 >
                   <option value="">{{ field.placeholder || '선택하세요' }}</option>
                   <option
-                    v-for="option in field.options"
+                    v-for="option in getSelectOptions(field)"
                     :key="option.value"
                     :value="option.value"
                   >
@@ -99,6 +131,7 @@
                     :key="opt.value"
                     type="button"
                     :class="['form-toggle-button', { active: formData[field.id] === opt.value }]"
+                    :disabled="isFieldDisabled(field)"
                     @click="formData[field.id] = opt.value"
                   >
                     {{ opt.label }}
@@ -113,7 +146,7 @@
                       :value="'Y'"
                       v-model="formData[field.id]"
                       :required="field.required"
-                      :disabled="field.readonlyInEdit && isEditMode"
+                      :disabled="(field.readonlyInEdit && isEditMode) || isFieldDisabled(field)"
                       class="radio-input"
                     />
                     <span>예</span>
@@ -125,7 +158,7 @@
                       :value="'N'"
                       v-model="formData[field.id]"
                       :required="field.required"
-                      :disabled="field.readonlyInEdit && isEditMode"
+                      :disabled="(field.readonlyInEdit && isEditMode) || isFieldDisabled(field)"
                       class="radio-input"
                     />
                     <span>아니오</span>
@@ -141,8 +174,9 @@
                   :required="field.required"
                   :rows="field.rows || 3"
                   :readonly="field.readonlyInEdit && isEditMode"
+                  :disabled="isFieldDisabled(field)"
                   :maxlength="field.maxLength"
-                  class="form-textarea"
+                  :class="['form-textarea', { 'form-textarea--required': field.required, 'form-textarea--error': isRequiredEmpty(field) }]"
                 />
               </div>
               </template>
@@ -153,7 +187,11 @@
             <button type="button" class="modal-button cancel-button" @click="handleClose">
               취소
             </button>
-            <button type="button" class="modal-button submit-button" @click="handleSubmit">
+            <button
+              type="button"
+              class="modal-button submit-button"
+              @click="handleSubmit"
+            >
               {{ isEditMode ? '수정' : '등록' }}
             </button>
           </div>
@@ -166,15 +204,19 @@
 <script setup lang="ts">
 import { watch, computed, ref } from 'vue'
 import { useAlertStore } from '../../stores/alert'
+import IdInput from './IdInput.vue'
+import IpInput from './IpInput.vue'
+import PortInput from './PortInput.vue'
 
 // 타입 정의 (export하여 다른 컴포넌트에서도 사용 가능)
 export type FormField = {
   id: string
-  label: string
-  type: 'text' | 'number' | 'select' | 'yesno' | 'textarea' | 'password' | 'hidden' | 'ip' | 'toggle'
+  /** hidden 타입은 레이블 미사용으로 생략 가능 */
+  label?: string
+  type: 'text' | 'number' | 'select' | 'yesno' | 'textarea' | 'password' | 'hidden' | 'ip' | 'id' | 'toggle'
   required?: boolean
   placeholder?: string
-  options?: { value: string; label: string }[]
+  options?: { value: string; label: string }[] | ((formData: Record<string, any>) => { value: string; label: string }[])
   rows?: number
   /** 수정 모달에서만 읽기 전용(복합 키 등 변경 불가 필드용) */
   readonlyInEdit?: boolean
@@ -190,6 +232,10 @@ export type FormField = {
   pattern?: string
   /** pattern 검증 실패 시 알림 메시지 */
   patternMessage?: string
+  /** 입력란 아래 안내 문구 (도움말) */
+  hint?: string
+  /** 비활성화 여부. 함수면 formData 기준으로 계산 */
+  disabled?: boolean | ((formData: Record<string, any>) => boolean)
 }
 
 const alertStore = useAlertStore()
@@ -199,13 +245,15 @@ interface Props {
   title: string
   fields: FormField[]
   initialData?: Record<string, any>
+  size?: 'default' | 'large'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isOpen: false,
   title: '',
   fields: () => [],
-  initialData: () => ({})
+  initialData: () => ({}),
+  size: 'default'
 })
 
 const emit = defineEmits<{
@@ -220,16 +268,57 @@ const formData = ref<Record<string, any>>({})
 // 모달이 열릴 때마다 증가시켜 폼 DOM을 새로 그리기 (이전 탭/모드의 DOM 잔여 영향 제거)
 const formKey = ref(0)
 
+// 셀렉트 옵션: 배열이면 그대로, 함수면 formData 기준으로 계산. 본부 변경 시 지사 등 dependent 필드 초기화에 사용
+function getSelectOptions(field: FormField): { value: string; label: string }[] {
+  if (!field.options) return []
+  if (Array.isArray(field.options)) return field.options
+  return field.options(formData.value)
+}
+
+// 필드 비활성화 여부 (disabled prop: boolean 또는 (formData) => boolean)
+function isFieldDisabled(field: FormField): boolean {
+  if (field.disabled === undefined) return false
+  if (typeof field.disabled === 'boolean') return field.disabled
+  return field.disabled(formData.value)
+}
+
+// IP가 4칸 모두 입력되었는지 확인
+function isIpComplete(value: unknown): boolean {
+  if (value === '' || value === undefined || value === null) return false
+  const parts = String(value).split('.')
+  if (parts.length !== 4) return false
+  return parts.every((part) => part.trim() !== '')
+}
+
+// 필수값 미입력 시 에러 스타일(빨간 테두리) 표시 여부
+function isRequiredEmpty(field: FormField): boolean {
+  if (!field.required || isFieldDisabled(field)) return false
+  const value = formData.value[field.id]
+  if (field.type === 'ip') {
+    return !isIpComplete(value)
+  }
+  return value === '' || value === undefined || value === null
+}
+
+// IpInput/PortInput에 전달할 class 바인딩
+function inputClassFor(field: FormField) {
+  return ['form-input', { 'form-input--required': field.required, 'form-input--error': isRequiredEmpty(field) }]
+}
+
 // 필드별 초기값 계산 (initialData는 부모가 열기 전에 이미 설정된 상태로 전달됨)
 function getInitialValue(field: FormField): any {
   if (field.type === 'password') return ''
   if (field.type === 'hidden' && props.initialData && props.initialData[field.id] !== undefined) return props.initialData[field.id]
   if (props.initialData && props.initialData[field.id] !== undefined) return props.initialData[field.id]
   if (field.type === 'yesno') return 'N'
-  if (field.type === 'toggle' && field.options?.length) {
-    const v = props.initialData && props.initialData[field.id]
-    if (v !== undefined && v !== null && v !== '') return v
-    return field.options[0].value
+  if (field.type === 'toggle') {
+    const opts = field.options
+    const optionsArray = Array.isArray(opts) ? opts : opts?.(formData.value)
+    if (optionsArray?.length) {
+      const v = props.initialData && props.initialData[field.id]
+      if (v !== undefined && v !== null && v !== '') return v
+      return optionsArray[0].value
+    }
   }
   if (field.type === 'number') return ''
   if (field.type === 'hidden') return ''
@@ -248,6 +337,18 @@ watch(() => props.isOpen, (newValue) => {
   }
 }, { immediate: true, flush: 'sync' })
 
+// 본부 변경 등으로 옵션이 바뀐 셀렉트: 현재 선택값이 옵션에 없으면 초기화
+watch(formData, () => {
+  for (const field of props.fields) {
+    if (field.type !== 'select' || !field.options || Array.isArray(field.options)) continue
+    const opts = field.options(formData.value)
+    const current = formData.value[field.id]
+    if (current !== '' && current != null && !opts.some(o => o.value === current)) {
+      formData.value[field.id] = ''
+    }
+  }
+}, { deep: true })
+
 // 오버레이에서 드래그 후 밖에서 뗐을 때는 닫지 않도록, 다운·업 모두 오버레이일 때만 닫기
 const mousedownOnOverlay = ref(false)
 const handleOverlayMouseUp = () => {
@@ -261,50 +362,20 @@ const handleClose = () => {
   emit('close')
 }
 
-// IP 입력 제한: 숫자와 점만, 최대 4옥텟, 옥텟당 0~255
-function filterIpInput(value: string): string {
-  let s = String(value ?? '').replace(/[^0-9.]/g, '')
-  s = s.replace(/^\.+/, '').replace(/\.\.+/g, '.')
-  const parts = s.split('.')
-  if (parts.length > 4) parts.splice(4)
-  const result = parts.map((part) => {
-    if (part.length > 3) part = part.slice(0, 3)
-    const num = parseInt(part, 10)
-    if (part.length === 3 && !Number.isNaN(num) && num > 255) return '255'
-    return part
-  }).join('.')
-  return result
-}
-// IP 입력 시 숫자(0-9)와 점(.)만 허용, 그 외 키는 keydown에서 차단
-function handleIpKeydown(e: KeyboardEvent) {
-  if (e.ctrlKey || e.metaKey || e.altKey) return
-  const key = e.key
-  if (key.length === 1 && !/[0-9.]/.test(key)) {
-    e.preventDefault()
-    return
-  }
-  if (key === '.') {
-    const val = (e.target as HTMLInputElement).value
-    if (val.split('.').length >= 4) e.preventDefault()
-  }
-}
-// IP 입력 paste 시 붙여넣은 내용 필터링 후 formData만 반영
-function handleIpPaste(fieldId: string, e: ClipboardEvent) {
-  e.preventDefault()
-  const raw = (e.clipboardData?.getData('text') ?? '')
-  formData.value[fieldId] = filterIpInput(raw)
-}
-
 const handleSubmit = () => {
   const data = formData.value
 
-  // 필수 필드 검증
+  // 필수 필드 검증 (비활성화된 필드는 제외)
   const missingFields = props.fields
-    .filter(field => field.required && (data[field.id] === undefined || data[field.id] === ''))
-    .map(field => field.label)
+    .filter(field => isRequiredEmpty(field))
+    .map(field => field.label ?? field.id)
 
   if (missingFields.length > 0) {
-    alertStore.show(`다음 필수를 입력해주세요: ${missingFields.join(', ')}`, 'warning')
+    const fieldList = missingFields.map((f) => `"${f}"`).join(', ')
+    alertStore.show(
+      `필수 입력 항목을 확인해주세요.\n입력되지 않은 항목: ${fieldList}`,
+      'warning'
+    )
     return
   }
 
@@ -312,7 +383,7 @@ const handleSubmit = () => {
   for (const field of props.fields) {
     if (field.type === 'hidden') continue
     const value = data[field.id]
-    const label = field.label
+    const label = field.label ?? field.id
 
     if (field.type === 'number') {
       const num = value === '' || value === undefined || value === null ? NaN : Number(value)
@@ -330,7 +401,7 @@ const handleSubmit = () => {
       }
     }
 
-    if ((field.type === 'text' || field.type === 'ip' || field.type === 'textarea' || field.type === 'password') && value != null && value !== '') {
+    if ((field.type === 'text' || field.type === 'ip' || field.type === 'textarea' || field.type === 'password' || field.type === 'id') && value != null && value !== '') {
       const str = String(value)
       if (field.minLength !== undefined && str.length < field.minLength) {
         alertStore.show(`${label}은(는) ${field.minLength}자 이상이어야 합니다.`, 'warning')
@@ -340,7 +411,7 @@ const handleSubmit = () => {
         alertStore.show(`${label}은(는) ${field.maxLength}자 이하여야 합니다.`, 'warning')
         return
       }
-      if ((field.type === 'text' || field.type === 'ip') && field.pattern) {
+      if ((field.type === 'text' || field.type === 'ip' || field.type === 'id') && field.pattern) {
         try {
           const re = new RegExp(field.pattern)
           if (!re.test(str)) {
@@ -383,6 +454,10 @@ const handleSubmit = () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.modal-container--large {
+  max-width: 1200px;
 }
 
 .modal-header {
@@ -428,10 +503,42 @@ const handleSubmit = () => {
   padding: 24px;
 }
 
+.modal-body--large {
+  padding: 16px;
+}
+
 .form-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.form-container--large {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px 16px;
+}
+
+.form-container--large > input[type="hidden"] {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-container--large .form-field {
+  gap: 4px;
+}
+
+.form-container--large .form-hint {
+  font-size: 0.75rem;
+}
+
+.form-container--large .form-field--wide {
+  grid-column: 1 / -1;
 }
 
 .form-field {
@@ -442,25 +549,56 @@ const handleSubmit = () => {
 
 .form-label {
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #475569;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
-.required-mark {
-  color: #ef4444;
-  margin-left: 4px;
+.form-label-required {
+  color: #2563eb;
+  margin-left: 2px;
 }
 
 .form-input,
 .form-select,
 .form-textarea {
   padding: 10px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #94a3b8;
   border-radius: 6px;
   font-size: 0.875rem;
-  color: #1e293b;
+  color: #0f172a;
   transition: all 0.2s;
   font-family: inherit;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: #94a3b8;
+}
+
+/* 필수 필드: 항상 파란 테두리 */
+.form-input--required,
+.form-select--required,
+.form-textarea--required {
+  border-color: #2563eb;
+}
+
+/* 필수인데 비어 있을 때도 파란 테두리(강조) */
+.form-input--error,
+.form-select--error,
+.form-textarea--error {
+  border-color: #2563eb;
+}
+
+.form-input--error:focus,
+.form-select--error:focus,
+.form-textarea--error:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.form-hint {
+  color: #64748b;
 }
 
 .form-input:focus,

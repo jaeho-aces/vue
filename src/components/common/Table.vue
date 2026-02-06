@@ -7,6 +7,7 @@
       :title="modalTitle || '데이터 입력/수정'"
       :fields="formFields"
       :initial-data="editingData || undefined"
+      :size="modalSize || 'default'"
       @close="handleModalClose"
       @submit="handleModalSubmit"
     />
@@ -274,7 +275,11 @@
           <!-- 각 데이터 항목을 개별적으로 배치 (1행) -->
           <div
             class="data-item-wrapper"
-            :class="{ 'data-item-even': virtualRow.index % 2 === 0, 'data-item-odd': virtualRow.index % 2 === 1 }"
+            :class="{
+              'data-item-even': virtualRow.index % 2 === 0,
+              'data-item-odd': virtualRow.index % 2 === 1,
+              'data-item-selected': isRowSelected(getRowId(sortedRows[virtualRow.index]?.original))
+            }"
             :style="{
               position: 'absolute',
               top: `${virtualRow.start}px`,
@@ -282,6 +287,7 @@
               width: '100%',
               height: '40px'
             }"
+            @click="handleRowClick(getRowId(sortedRows[virtualRow.index]?.original))"
           >
             <div
               class="grid-row"
@@ -291,10 +297,11 @@
                 width: '100%'
               }"
             >
-              <!-- 체크박스 컬럼 -->
+              <!-- 체크박스 컬럼 (클릭 시 행 클릭과 중복 방지) -->
               <div
                 class="data-cell data-cell-checkbox sticky-checkbox-column"
                 :style="{ left: '0px' }"
+                @click.stop
               >
                 <input
                   type="checkbox"
@@ -362,6 +369,7 @@ interface Props {
   defaultVisibleColumns?: string[] | Set<string>
   formFields?: FormField[]
   modalTitle?: string
+  modalSize?: 'default' | 'large'
   checkboxColumnWidth?: number
   idColumnWidth?: number
   idField?: string
@@ -377,7 +385,8 @@ const props = withDefaults(defineProps<Props>(), {
   defaultVisibleColumns: () => [],
   hideEditButton: false,
   preferenceKey: '',
-  hideIdColumn: false
+  hideIdColumn: false,
+  modalSize: 'default'
 })
 
 const emit = defineEmits<{
@@ -566,27 +575,11 @@ const handleModalClose = () => {
 
 const handleModalSubmit = (data: Record<string, any>) => {
   const isNew = !editingData.value
-  const idField = props.idField
-  
-  if (isNew) {
-    // 신규 모드: 데이터 추가
-    const newItem = { ...data }
-    internalData.value.push(newItem)
-  } else {
-    // 수정 모드: 데이터 업데이트
-    const index = internalData.value.findIndex((item: any) => getRowId(item) === data[idField])
-    if (index !== -1) {
-      internalData.value[index] = { ...internalData.value[index], ...data }
-    }
-  }
-  
-  // 부모에게 업데이트 알림
-  emit('update:modelValue', [...internalData.value])
-  // 이벤트도 emit (필요한 경우)
+  pendingSubmit.value = true
+  submitSnapshot.value = snapshotModelValue(props.modelValue)
+
+  // 이벤트 emit (부모에서 실제 저장 처리)
   emit('update', data, isNew)
-  
-  handleModalClose()
-  selectedRowIds.value.clear()
 }
 
 // 행 ID 가져오기
@@ -611,7 +604,7 @@ const isRowSelected = (id: string) => {
   return selectedRowIds.value.has(id)
 }
 
-// 행 선택/해제
+// 행 선택/해제 (체크박스 change 시)
 const handleRowSelect = (id: string, event: Event) => {
   const checked = (event.target as HTMLInputElement).checked
   if (checked) {
@@ -619,6 +612,17 @@ const handleRowSelect = (id: string, event: Event) => {
   } else {
     selectedRowIds.value.delete(id)
   }
+  selectedRowIds.value = new Set(selectedRowIds.value)
+}
+
+// 행 클릭 시 체크박스 토글
+const handleRowClick = (id: string) => {
+  if (selectedRowIds.value.has(id)) {
+    selectedRowIds.value.delete(id)
+  } else {
+    selectedRowIds.value.add(id)
+  }
+  selectedRowIds.value = new Set(selectedRowIds.value)
 }
 
 // 전체 선택/해제
@@ -700,37 +704,37 @@ const visibleColumnsList = computed(() => {
 
 // 내부 데이터 관리 (v-model과 동기화)
 const internalData = ref([...props.modelValue])
+const pendingSubmit = ref(false)
+const submitSnapshot = ref('')
+const lastModelSnapshot = ref('')
+
+const snapshotModelValue = (value: any[]) => {
+  try {
+    return JSON.stringify(value ?? [])
+  } catch {
+    return ''
+  }
+}
 
 // props.modelValue가 변경되면 내부 데이터도 업데이트
 watch(
   () => props.modelValue,
-  (newData, oldData) => {
-    // 배열 참조가 변경되었거나, 길이가 변경되었거나, 내용이 변경되었는지 확인
-    // 첫 번째와 마지막 항목의 주요 필드를 비교하여 변경 감지
-    const isChanged = 
-      newData !== oldData || 
-      !oldData ||
-      newData.length !== oldData.length ||
-      (newData.length > 0 && oldData && (
-        // 첫 번째 항목 비교
-        (newData[0] && oldData[0] && (
-          newData[0].ch_id !== oldData[0].ch_id ||
-          newData[0].hq_code !== oldData[0].hq_code ||
-          newData[0].route_code !== oldData[0].route_code ||
-          newData[0].branch_code !== oldData[0].branch_code
-        )) ||
-        // 마지막 항목 비교
-        (newData.length > 1 && oldData.length > 1 && 
-         newData[newData.length - 1] && oldData[oldData.length - 1] && (
-          newData[newData.length - 1].ch_id !== oldData[oldData.length - 1].ch_id ||
-          newData[newData.length - 1].hq_code !== oldData[oldData.length - 1].hq_code ||
-          newData[newData.length - 1].route_code !== oldData[oldData.length - 1].route_code ||
-          newData[newData.length - 1].branch_code !== oldData[oldData.length - 1].branch_code
-        ))
-      ))
-    
-    if (isChanged) {
+  (newData) => {
+    const currentSnapshot = snapshotModelValue(newData)
+    if (lastModelSnapshot.value === '') {
+      lastModelSnapshot.value = currentSnapshot
       internalData.value = [...newData]
+      return
+    }
+    if (currentSnapshot !== lastModelSnapshot.value) {
+      lastModelSnapshot.value = currentSnapshot
+      internalData.value = [...newData]
+      if (pendingSubmit.value && currentSnapshot !== submitSnapshot.value) {
+        pendingSubmit.value = false
+        submitSnapshot.value = ''
+        handleModalClose()
+        selectedRowIds.value.clear()
+      }
     }
   },
   { deep: true, immediate: true }
@@ -818,65 +822,66 @@ const table = useVueTable({
 // 컨테이너 너비 감지
 const containerWidth = ref(0)
 
-// 클램프된 테이블 전체 너비 (컬럼 최소 너비 적용 시)
-const effectiveTableWidth = computed(() => {
+// 사용자가 리사이즈한 컬럼인지 (columnWidthsState에 값이 있으면 고정 픽셀 사용)
+const hasUserSetWidth = (columnId: string) => columnWidthsState.value[columnId] !== undefined
+
+// Grid 컬럼 너비 계산: 리사이즈한 컬럼은 지정 너비 유지, 나머지는 남은 공간을 비율로 분배. template 문자열과 총 너비 반환.
+const gridColumnsState = computed(() => {
   const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
   const hasIdColumn = props.idField && props.idField.trim() !== '' && !props.hideIdColumn
-  const idBaseW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
-  const visibleColumnBaseWidths = visibleColumnsList.value.map(col =>
-    getColumnWidth(col.id, col.size)
-  )
-  const totalBaseWidth = idBaseW + visibleColumnBaseWidths.reduce((sum, w) => sum + w, 0)
-  const tableContainerW = containerWidth.value || (checkboxW + totalBaseWidth)
+  const tableContainerW = containerWidth.value || 1200
   const availableWidth = Math.max(0, tableContainerW - checkboxW)
-  const ratio = totalBaseWidth > 0 ? availableWidth / totalBaseWidth : 1
-  const idW = idBaseW * ratio
-  const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
-  const idWClamped = hasIdColumn ? Math.max(idW, getHeaderMinWidth(props.idField)) : 0
-  const visibleClamped = visibleColumnWidths.map((w, i) =>
-    Math.max(w, getHeaderMinWidth(visibleColumnsList.value[i].id))
+
+  const idMin = hasIdColumn ? getHeaderMinWidth(props.idField) : 0
+  const idUserSet = hasIdColumn && hasUserSetWidth(props.idField)
+  const idFixedW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
+
+  const visibleCols = visibleColumnsList.value
+  const visibleFixed: number[] = []
+  const visibleFlexDefault: number[] = []
+  let fixedSum = idUserSet ? idFixedW : 0
+
+  visibleCols.forEach((col, i) => {
+    const minW = getHeaderMinWidth(col.id)
+    if (hasUserSetWidth(col.id)) {
+      const w = getColumnWidth(col.id, col.size)
+      visibleFixed[i] = w
+      visibleFlexDefault[i] = 0
+      fixedSum += w
+    } else {
+      visibleFixed[i] = 0
+      visibleFlexDefault[i] = Math.max(minW, col.size)
+    }
+  })
+
+  const remaining = availableWidth - fixedSum
+  const flexTotal = visibleFlexDefault.reduce((a, b) => a + b, 0) + (hasIdColumn && !idUserSet ? idFixedW || idMin : 0)
+  const ratio = flexTotal > 0 ? Math.max(0, remaining) / flexTotal : 1
+
+  const idW = hasIdColumn
+    ? (idUserSet ? idFixedW : Math.max(idMin, (idFixedW || idMin) * ratio))
+    : 0
+  const visibleColumnWidths = visibleCols.map((col, i) =>
+    visibleFixed[i] > 0
+      ? visibleFixed[i]
+      : Math.max(getHeaderMinWidth(col.id), visibleFlexDefault[i] * ratio)
   )
-  return checkboxW + idWClamped + visibleClamped.reduce((sum, w) => sum + w, 0)
+
+  const totalWidth = checkboxW + idW + visibleColumnWidths.reduce((a, b) => a + b, 0)
+  const template = hasIdColumn
+    ? `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+    : `${checkboxW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
+  return { template, totalWidth }
 })
+
+const gridTemplateColumns = computed(() => gridColumnsState.value.template)
+
+const effectiveTableWidth = computed(() => gridColumnsState.value.totalWidth)
 
 // 컬럼 최소 너비를 지키면 테이블이 컨테이너보다 넓어질 때만 true
 const needsHorizontalScroll = computed(() => {
   const cw = containerWidth.value
   return cw > 0 && effectiveTableWidth.value > cw
-})
-
-// Grid 컬럼 템플릿 계산 (피팅 모드: 스케일된 너비, 오버플로우 모드: 클램프된 너비)
-const gridTemplateColumns = computed(() => {
-  const checkboxW = getColumnWidth('checkbox', props.checkboxColumnWidth)
-  const hasIdColumn = props.idField && props.idField.trim() !== '' && !props.hideIdColumn
-  const idBaseW = hasIdColumn ? getColumnWidth(props.idField, props.idColumnWidth) : 0
-  const visibleColumnBaseWidths = visibleColumnsList.value.map(col =>
-    getColumnWidth(col.id, col.size)
-  )
-
-  const totalBaseWidth = idBaseW + visibleColumnBaseWidths.reduce((sum, w) => sum + w, 0)
-  const tableContainerW = containerWidth.value || (checkboxW + totalBaseWidth)
-  const availableWidth = Math.max(0, tableContainerW - checkboxW)
-
-  const ratio = totalBaseWidth > 0 ? availableWidth / totalBaseWidth : 1
-  const idW = idBaseW * ratio
-  const visibleColumnWidths = visibleColumnBaseWidths.map(w => w * ratio)
-  const idWClamped = hasIdColumn ? Math.max(idW, getHeaderMinWidth(props.idField)) : 0
-  const visibleClamped = visibleColumnWidths.map((w, i) =>
-    Math.max(w, getHeaderMinWidth(visibleColumnsList.value[i].id))
-  )
-  const totalClamped = checkboxW + idWClamped + visibleClamped.reduce((sum, w) => sum + w, 0)
-
-  if (totalClamped > tableContainerW) {
-    if (hasIdColumn) {
-      return `${checkboxW}px ${idWClamped}px ${visibleClamped.map(w => `${w}px`).join(' ')}`
-    }
-    return `${checkboxW}px ${visibleClamped.map(w => `${w}px`).join(' ')}`
-  }
-  if (hasIdColumn) {
-    return `${checkboxW}px ${idW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
-  }
-  return `${checkboxW}px ${visibleColumnWidths.map(w => `${w}px`).join(' ')}`
 })
 
 // 가상 스크롤 설정
@@ -1165,12 +1170,11 @@ defineExpose({
 
 .data-cell-id {
   font-weight: 600;
-  color: #1e40af;
   text-align: center;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 2px solid #7dd3fc;
+  border-right: 1px solid #e2e8f0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1202,15 +1206,7 @@ defineExpose({
 }
 
 .table-header .sticky-id-column.filtered {
-  background-color: #dbeafe !important;
-}
-
-.data-item-even .sticky-id-column {
-  background-color: #e0f2fe !important;
-}
-
-.data-item-odd .sticky-id-column {
-  background-color: #dbeafe !important;
+  background-color: #e2e8f0 !important;
 }
 
 .data-cell {
@@ -1236,26 +1232,15 @@ defineExpose({
 .data-item-wrapper {
   position: absolute;
   border-bottom: 2px solid #e2e8f0;
+  cursor: pointer;
 }
 
 .data-item-even {
   background-color: #ffffff;
 }
 
-.data-item-even .data-cell-id {
-  background-color: rgba(239, 246, 255, 0.3);
-  color: #1d4ed8;
-  font-weight: 700;
-  border-right-width: 2px;
-}
-
 .data-item-odd {
   background-color: #f9fafb;
-}
-
-.data-item-odd .data-cell-id {
-  background-color: #dbeafe;
-  border-right: 2px solid #60a5fa;
 }
 
 /* 컬럼 선택 드롭다운 스타일 */
@@ -1535,6 +1520,19 @@ defineExpose({
 
 .data-item-odd .data-cell-checkbox {
   background-color: #f9fafb;
+}
+
+/* 체크박스로 선택된 행 배경 */
+.data-item-selected .data-cell,
+.data-item-selected .data-cell-checkbox,
+.data-item-selected .data-cell-id {
+  background-color: #dbeafe !important;
+}
+
+.data-item-selected:hover .data-cell,
+.data-item-selected:hover .data-cell-checkbox,
+.data-item-selected:hover .data-cell-id {
+  background-color: #bfdbfe !important;
 }
 
 .table-header .sticky-checkbox-column {

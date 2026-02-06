@@ -63,5 +63,16 @@ register_database_routes(app)
 register_prometheus_routes(app)
 
 if __name__ == "__main__":
+    import logging
     import uvicorn
+
+    class SuppressAuthMe401(logging.Filter):
+        """GET /api/auth/me 401은 비로그인 시 정상이므로 액세스 로그에서 제외."""
+        def filter(self, record: logging.LogRecord) -> bool:
+            msg = (record.getMessage() or "")
+            if "401" in msg and "/api/auth/me" in msg and "GET" in msg:
+                return False
+            return True
+
+    logging.getLogger("uvicorn.access").addFilter(SuppressAuthMe401())
     uvicorn.run(app, host="0.0.0.0", port=8000)
