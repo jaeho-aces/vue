@@ -1,0 +1,1 @@
+@Tailwind_Conversion_Guide.md 의 규칙에 따라, @layout.css 를 참고하여  스타일을 Tailwind CSS로 완전히 전환해줘. @src/components/views/Dashboard2View.vue 

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
 
 /* 커스텀 폰트 정의 */
 @font-face {
@@ -89,25 +90,415 @@
   --gray-900: #111827;
 }
 
-/* 전역 유틸리티 클래스 */
-.flex {
-  display: flex;
-}
+/* LoginView 컴포넌트 스타일 */
+@layer components {
+  .login-bg-gradient {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+  }
 
-.items-center {
-  align-items: center;
-}
+  .login-bg-gradient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59, 130, 246, 0.25), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 50%, rgba(99, 102, 241, 0.12), transparent),
+      radial-gradient(ellipse 50% 30% at 0% 80%, rgba(59, 130, 246, 0.1), transparent);
+    pointer-events: none;
+  }
 
-.justify-center {
-  justify-content: center;
-}
+  .login-card-glass {
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+  }
 
-.gap-2 {
-  gap: 8px;
-}
+  .btn-login-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  }
 
-.gap-8 {
-  gap: 32px;
+  .btn-loading-spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 0.5rem;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Pulse Animation for Dashboard */
+  @keyframes pulse-dashboard {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.2);
+    }
+  }
+
+  .animate-pulse-dashboard {
+    animation: pulse-dashboard 2s infinite;
+  }
+
+  /* Cyber Dashboard Styles */
+  @keyframes flow-dash {
+    from { stroke-dashoffset: 64; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  @keyframes rotate-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+  }
+
+  .hexagon-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%2300f3ff' fill-opacity='0.03' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5z'/%3E%3C/svg%3E");
+    background-size: 56px 98px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .flow-line-bg {
+    fill: none;
+    stroke: rgba(0, 255, 204, 0.1);
+    stroke-width: 1.5;
+  }
+
+  .flow-line-active {
+    fill: none;
+    stroke: #00ffcc;
+    stroke-width: 2;
+    stroke-dasharray: 8, 30;
+    filter: drop-shadow(0 0 5px #00ffcc);
+    animation: flow-dash 2s linear infinite;
+  }
+
+  .connector-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .glass-reflection {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
+    border-radius: 50%;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Dashboard2View (Cyber Dashboard) */
+  .cyber-dashboard {
+    background: radial-gradient(circle at 50% 50%, #0d0d1a 0%, #04040a 100%);
+    color: #e0faff;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  .cyber-dashboard-header-bar {
+    background: rgba(0, 30, 80, 0.6);
+    border-left: 4px solid #00f3ff;
+    border-bottom: 1px solid rgba(0, 150, 255, 0.4);
+    clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%);
+  }
+
+  .dashboard-logo {
+    filter: drop-shadow(0 0 5px rgba(0, 243, 255, 0.5));
+  }
+
+  .title-text {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px #00f3ff;
+  }
+
+  .cyber-panel {
+    background: rgba(16, 20, 32, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 243, 255, 0.2);
+  }
+
+  .cyber-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.8), transparent);
+  }
+
+  .panel-name {
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 1px;
+  }
+
+  .blue-bg-cap {
+    background: linear-gradient(90deg, rgba(0, 30, 80, 0.9) 0%, rgba(0, 60, 120, 0.7) 100%) !important;
+    border-bottom: 1px solid rgba(0, 150, 255, 0.5) !important;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+  }
+
+  .hq-tabs-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn:hover {
+    color: #aaa;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .tab-btn.active {
+    color: #00ffcc;
+    border-bottom-color: #00ffcc;
+    background: rgba(0, 255, 204, 0.05);
+    text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+  }
+
+  .flow-connector {
+    top: calc(50% - 15px);
+    transform: translateY(-50%);
+  }
+
+  .flow-connector.to-right { left: 80px; }
+  .flow-connector.to-left { right: 80px; }
+
+  .cdn-flow-connector.from-left {
+    right: 100%;
+    transform: translateY(-70%);
+  }
+
+  .cdn-flow-connector.from-right {
+    left: 100%;
+    transform: translateY(-70%);
+  }
+
+  .mini-chart svg {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+  }
+
+  .mini-chart .bg {
+    fill: none;
+    stroke: rgba(255,255,255,0.05);
+    stroke-width: 3;
+  }
+
+  .mini-chart .progress {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+
+  .mini-chart.cyan .progress {
+    stroke: #00f3ff;
+    filter: drop-shadow(0 0 3px #00f3ff);
+  }
+
+  .mini-inner .v1 {
+    color: #00f3ff;
+    text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+  }
+
+  .mini-inner .v-alt {
+    color: #ff4d4d;
+  }
+
+  .site1-theme .service-row {
+    align-self: flex-end;
+    margin-right: 20px;
+  }
+
+  .gangwon-theme .service-row {
+    align-self: flex-start;
+    margin-left: 20px;
+  }
+
+  .active-mode .mode-tag {
+    color: #00ffcc;
+    background: rgba(0, 255, 204, 0.1);
+    box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+  }
+
+  .service-row.active-mode {
+    border-color: rgba(0, 255, 204, 0.4);
+    box-shadow: 0 0 20px rgba(0, 255, 204, 0.1);
+  }
+
+  .standby-mode .mode-tag {
+    color: #ffcc00;
+    background: rgba(255, 204, 0, 0.1);
+  }
+
+  .service-row.standby-mode {
+    border-color: rgba(255, 204, 0, 0.4) !important;
+    box-shadow: 0 0 20px rgba(255, 204, 0, 0.1);
+  }
+
+  .active-mode .s-icon.active {
+    border-color: rgba(0, 255, 204, 0.6);
+    background: rgba(0, 255, 204, 0.15);
+    box-shadow: 0 0 12px rgba(0, 255, 204, 0.2);
+  }
+
+  .standby-mode .s-icon.active {
+    border-color: rgba(255, 204, 0, 0.6) !important;
+    background: rgba(255, 204, 0, 0.15) !important;
+    box-shadow: 0 0 12px rgba(255, 204, 0, 0.2) !important;
+  }
+
+  .i-white { color: #fff; width: 20px; }
+  .i-blue { color: #00f3ff; width: 20px; }
+  .i-green { color: #00ffcc; width: 20px; }
+  .i-yellow { color: #ffcc00; width: 20px; }
+
+  .mid-connector {
+    top: calc(50% - 35px);
+    transform: translate(-50%, -50%);
+  }
+
+  .g-wrap.car-cluster {
+    background: radial-gradient(circle at 50% 50%, #1a1b25 0%, #050508 100%);
+    border: 4px solid #222;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.05);
+  }
+
+  .tick {
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 1;
+  }
+
+  .tick.major {
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 2;
+  }
+
+  .dial-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.03);
+    stroke-width: 6;
+    stroke-dasharray: 188 251;
+    transform: rotate(135deg);
+    transform-origin: center;
+  }
+
+  .dial-needle {
+    fill: none;
+    stroke-width: 6;
+    stroke-linecap: butt;
+    transform: rotate(135deg);
+    transform-origin: center;
+    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .instrument-green .dial-needle {
+    filter: drop-shadow(0 0 10px rgba(0, 255, 204, 0.5));
+  }
+
+  .v-main {
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    margin-bottom: -5px;
+  }
+
+  .s-val {
+    font-family: 'Orbitron';
+  }
+
+  .stat-item.ok .s-val { color: #00ffcc; }
+  .stat-item.standby .s-val { color: #ffcc00; }
+  .stat-item.error .s-val { color: #ff3333; }
+
+  .cdn-node-box {
+    background: radial-gradient(circle at 50% 50%, #1a1b25 0%, #050508 100%);
+    border: 2px solid #333;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.02);
+    z-index: 21;
+    transform: translateY(20px);
+  }
+
+  .cdn-icon {
+    color: #00d2ff;
+    filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.3));
+  }
+
+  .alarm-box.critical {
+    border-left-color: #9e4a4a;
+    box-shadow: inset 5px 0 10px rgba(158, 74, 74, 0.1);
+  }
+
+  .alarm-box.warning {
+    border-left-color: #9e8b4a;
+    box-shadow: inset 5px 0 10px rgba(158, 139, 74, 0.1);
+  }
+
+  .alarm-box.info {
+    border-left-color: #4a799e;
+    box-shadow: inset 5px 0 10px rgba(74, 121, 158, 0.1);
+  }
+
+  .hq-right .green {
+    color: #ffffff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+
+  .hq-right .red {
+    color: #ff4d4d;
+  }
+
+  .t-meta .peak {
+    font-family: 'Orbitron';
+  }
+
+  .t-meta .peak small {
+    opacity: 0.6;
+    margin-left: 2px;
+  }
+
+  .cyber-dashboard ::-webkit-scrollbar { width: 4px; }
+  .cyber-dashboard ::-webkit-scrollbar-track { background: transparent; }
+  .cyber-dashboard ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
 }
 
 

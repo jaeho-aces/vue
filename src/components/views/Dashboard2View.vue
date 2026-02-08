@@ -1,63 +1,63 @@
 <template>
-  <div class="cyber-dashboard">
+  <div class="cyber-dashboard relative w-full h-screen overflow-hidden p-[15px] flex flex-col">
     <!-- Background grid and scanning effects -->
     <div class="grid-overlay"></div>
     <div class="hexagon-overlay"></div>
 
     <!-- Top Navigation / Header -->
-    <div class="dashboard-header">
-      <div class="header-main-title flex items-center gap-4">
-        <img src="/ci.svg" alt="CI" class="dashboard-logo" />
-        <span class="title-text">CCTV 영상 인터넷 제공 시스템 대시보드</span>
+    <div class="mb-[15px] z-10">
+      <div class="cyber-dashboard-header-bar inline-flex items-center py-1.5 pr-[30px] pl-5 gap-[15px]">
+        <img src="/ci.svg" alt="CI" class="dashboard-logo h-6 w-auto" />
+        <span class="title-text text-[1.1rem] text-white">CCTV 영상 인터넷 제공 시스템 대시보드</span>
       </div>
     </div>
 
-    <div class="main-layout">
+    <div class="flex-1 flex flex-col gap-[15px] z-[5]">
       <!-- Top Section -->
-      <div class="top-row">
+      <div class="h-[48%] flex items-center gap-2.5">
         <!-- Site 1 Panel -->
-        <div class="cyber-panel main-panel site-left">
-          <div class="panel-cap blue-bg-cap">
-            <span class="panel-name">교통센터</span>
+        <div class="cyber-panel flex-1 h-full rounded flex flex-col relative overflow-hidden shadow-[0_0_20px_rgba(0,243,255,0.1)]">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center">
+            <span class="panel-name text-[0.9rem] font-bold">교통센터</span>
           </div>
-          <div class="panel-content">
+          <div class="flex-1 flex py-2.5 px-5 gap-[150px] items-center justify-center relative">
             <!-- CCTV Column -->
-            <div class="side-column">
-              <span class="col-title">CCTV</span>
-              <div class="gauge-stack">
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+            <div class="w-[140px] flex flex-col gap-5 items-center justify-center m-0 z-[2]">
+              <span class="text-base font-bold text-[#888] border-b-2 border-[#333] w-full text-center pb-2 mb-2.5">CCTV</span>
+              <div class="flex flex-col gap-[30px]">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">45</span><span class="v-alt">/2</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 80 113;"/></svg>
                   </div>
-                  <span class="mini-label">도로공사</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">도로공사</span>
                 </div>
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">38</span><span class="v-alt">/1</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 70 113;"/></svg>
                   </div>
-                  <span class="mini-label">수탁</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">수탁</span>
                 </div>
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">52</span><span class="v-alt">/3</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 90 113;"/></svg>
                   </div>
-                  <span class="mini-label">비수탁</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">비수탁</span>
                 </div>
               </div>
             </div>
  
             <!-- Flow Connector: CCTV to Conversion (Absolute Overlay Expanded) -->
-            <div class="flow-connector to-right">
-              <svg viewBox="0 -50 250 460" class="connector-svg">
+            <div class="flow-connector to-right absolute w-[400px] h-[460px] z-[1] pointer-events-none">
+              <svg viewBox="0 -50 250 460" class="connector-svg w-full h-full overflow-visible">
                 <path d="M0,65 C200,65 200,230 400,230" class="flow-line-bg"/>
                 <path d="M0,230 L400,230" class="flow-line-bg"/>
                 <path d="M0,395 C200,395 200,230 400,230" class="flow-line-bg"/>
@@ -69,28 +69,28 @@
             </div>
 
             <!-- Main Status Area -->
-            <div class="center-area site1-theme">
-              <div class="service-row active-mode">
-                <div class="mode-tag">ACTIVE</div>
-                <div class="service-icons">
-                  <div class="s-icon active"><Monitor class="i-green"/><span class="t">WEB</span></div>
-                  <div class="s-icon active"><Server class="i-green"/><span class="t">WAS</span></div>
-                  <div class="s-icon active"><Database class="i-green"/><span class="t">DB</span></div>
+            <div class="flex-1 h-full flex flex-col justify-between pt-1.5 m-0 z-[2] site1-theme">
+              <div class="service-row active-mode flex flex-col items-center justify-center gap-[15px] bg-black/40 py-3 px-[25px] rounded-xl border border-white/[0.08] mb-auto w-fit">
+                <div class="mode-tag py-1 px-3.5 rounded-md font-extrabold text-[0.9rem] border-2 border-current">ACTIVE</div>
+                <div class="service-icons flex gap-4">
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Monitor class="i-green"/><span class="t text-base font-bold text-white tracking-wider">WEB</span></div>
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Server class="i-green"/><span class="t text-base font-bold text-white tracking-wider">WAS</span></div>
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Database class="i-green"/><span class="t text-base font-bold text-white tracking-wider">DB</span></div>
                 </div>
               </div>
 
-              <div class="gauge-pair">
-                <div class="big-gauge instrument-green">
-                  <div class="g-wrap car-cluster">
+              <div class="gauge-pair flex justify-center gap-[200px] flex-1 items-center relative">
+                <div class="big-gauge flex flex-col items-center gap-2.5 z-[2] instrument-green">
+                  <div class="g-wrap car-cluster relative w-[200px] h-[200px] rounded-full">
                     <div class="glass-reflection"></div>
-                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg">
+                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg rotate-0 w-full h-full overflow-visible">
                       <defs>
                         <linearGradient id="greenNeedle" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" style="stop-color:#00ffcc;stop-opacity:1" />
                           <stop offset="100%" style="stop-color:#00aa88;stop-opacity:1" />
                         </linearGradient>
                       </defs>
-                      <g class="notches">
+                      <g class="notches group">
                         <line v-for="n in 21" :key="n" x1="50" y1="10" x2="50" y2="15" 
                               :transform="`rotate(${((n-1) * 13.5) - 135}, 50, 50)`" 
                               class="tick" :class="{ major: (n-1) % 5 === 0 }"/>
@@ -99,30 +99,30 @@
                       <circle cx="50" cy="50" r="40" class="dial-needle" stroke="url(#greenNeedle)" 
                               style="stroke-dasharray: 140 251; stroke-dashoffset: 0;"/>
                     </svg>
-                    <div class="g-text">
-                      <span class="v-main">8</span>
-                      <div class="instrument-status-grid">
-                        <div class="stat-item standby"><span class="s-val">2</span></div>
-                        <div class="stat-item error"><span class="s-val">0</span></div>
+                    <div class="g-text absolute inset-0 flex flex-col items-center justify-center z-[5]">
+                      <span class="v-main text-[2.5rem] font-bold text-white">8</span>
+                      <div class="instrument-status-grid flex gap-[15px] mt-1.5 py-1 px-3 bg-black/40 border border-white/[0.08] rounded-[20px]">
+                        <div class="stat-item standby flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">2</span></div>
+                        <div class="stat-item error flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">0</span></div>
                       </div>
                     </div>
                   </div>
-                  <span class="g-label">변환/분배</span>
+                  <span class="g-label text-base text-[#ddd] font-bold uppercase tracking-wider">변환/분배</span>
                 </div>
 
                 <!-- Mid-Flow: Conversion to Media -->
-                <div class="flow-connector mid-connector to-right">
+                <div class="flow-connector mid-connector to-right w-[200px] h-[100px] absolute left-1/2 z-[1] pointer-events-none">
                   <svg viewBox="0 -20 200 100" class="connector-svg">
                     <path d="M0,50 L200,50" class="flow-line-bg"/>
                     <path d="M0,50 L200,50" class="flow-line-active"/>
                   </svg>
                 </div>
 
-                <div class="big-gauge instrument-green">
-                  <div class="g-wrap car-cluster">
+                <div class="big-gauge flex flex-col items-center gap-2.5 z-[2] instrument-green">
+                  <div class="g-wrap car-cluster relative w-[200px] h-[200px] rounded-full">
                     <div class="glass-reflection"></div>
-                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg">
-                      <g class="notches">
+                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg rotate-0 w-full h-full overflow-visible">
+                      <g class="notches group">
                         <line v-for="n in 21" :key="n" x1="50" y1="10" x2="50" y2="15" 
                               :transform="`rotate(${((n-1) * 13.5) - 135}, 50, 50)`" 
                               class="tick" :class="{ major: (n-1) % 5 === 0 }"/>
@@ -131,15 +131,15 @@
                       <circle cx="50" cy="50" r="40" class="dial-needle" stroke="url(#greenNeedle)" 
                               style="stroke-dasharray: 180 251; stroke-dashoffset: 0;"/>
                     </svg>
-                    <div class="g-text">
-                      <span class="v-main">12</span>
-                      <div class="instrument-status-grid">
-                        <div class="stat-item standby"><span class="s-val">5</span></div>
-                        <div class="stat-item error"><span class="s-val">1</span></div>
+                    <div class="g-text absolute inset-0 flex flex-col items-center justify-center z-[5]">
+                      <span class="v-main text-[2.5rem] font-bold text-white">12</span>
+                      <div class="instrument-status-grid flex gap-[15px] mt-1.5 py-1 px-3 bg-black/40 border border-white/[0.08] rounded-[20px]">
+                        <div class="stat-item standby flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">5</span></div>
+                        <div class="stat-item error flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">1</span></div>
                       </div>
                     </div>
                   </div>
-                  <span class="g-label">미디어</span>
+                  <span class="g-label text-base text-[#ddd] font-bold uppercase tracking-wider">미디어</span>
                 </div>
               </div>
             </div>
@@ -147,9 +147,9 @@
         </div>
 
         <!-- CDN Middle Box -->
-        <div class="cdn-spacer">
+        <div class="cdn-spacer flex flex-col items-center justify-center w-10 relative z-20">
           <!-- Flow: Site 1 Media to CDN -->
-          <div class="cdn-flow-connector from-left">
+          <div class="cdn-flow-connector from-left absolute w-[200px] h-[100px] top-1/2 z-[1] pointer-events-none">
             <svg viewBox="0 -80 200 100" class="connector-svg">
               <path d="M0,50 L200,50" class="flow-line-bg"/>
               <path d="M0,50 L200,50" class="flow-line-active"/>
@@ -157,42 +157,42 @@
           </div>
 
           <!-- Flow: Site 2 Media to CDN -->
-          <div class="cdn-flow-connector from-right">
+          <div class="cdn-flow-connector from-right absolute w-[200px] h-[100px] top-1/2 z-[1] pointer-events-none">
             <svg viewBox="0 -80 200 100" class="connector-svg">
               <path d="M200,50 L0,50" class="flow-line-bg"/>
               <path d="M200,50 L0,50" class="flow-line-active"/>
             </svg>
           </div>
 
-          <div class="cdn-node-box">
-            <Globe class="cdn-icon" />
-            <span class="cdn-name">CDN</span>
+          <div class="cdn-node-box w-[150px] h-[150px] rounded-xl flex flex-col items-center justify-center">
+            <Globe class="cdn-icon w-[60px] h-[60px] mb-2.5" />
+            <span class="cdn-name text-[1.4rem] font-extrabold text-white tracking-[2px]">CDN</span>
           </div>
         </div>
 
         <!-- Gangwon Panel -->
-        <div class="cyber-panel main-panel site-right">
-          <div class="panel-cap blue-bg-cap">
-            <span class="panel-name">김천본사</span>
+        <div class="cyber-panel flex-1 h-full rounded flex flex-col relative overflow-hidden shadow-[0_0_20px_rgba(255,0,255,0.1)]">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center">
+            <span class="panel-name text-[0.9rem] font-bold">김천본사</span>
           </div>
-          <div class="panel-content">
+          <div class="flex-1 flex py-2.5 px-5 gap-[150px] items-center justify-center relative">
             <!-- Main Status Area -->
-            <div class="center-area gangwon-theme">
-              <div class="service-row standby-mode">
-                <div class="mode-tag">STANDBY</div>
-                <div class="service-icons">
-                  <div class="s-icon active"><Monitor class="i-yellow"/><span class="t">Web</span></div>
-                  <div class="s-icon active"><Server class="i-yellow"/><span class="t">WAS</span></div>
-                  <div class="s-icon active"><Database class="i-yellow"/><span class="t">DB</span></div>
+            <div class="flex-1 h-full flex flex-col justify-between pt-1.5 m-0 z-[2] gangwon-theme">
+              <div class="service-row standby-mode flex flex-col items-center justify-center gap-[15px] bg-black/40 py-3 px-[25px] rounded-xl border border-white/[0.08] mb-auto w-fit">
+                <div class="mode-tag py-1 px-3.5 rounded-md font-extrabold text-[0.9rem] border-2 border-current">STANDBY</div>
+                <div class="service-icons flex gap-4">
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Monitor class="i-yellow"/><span class="t text-base font-bold text-white tracking-wider">Web</span></div>
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Server class="i-yellow"/><span class="t text-base font-bold text-white tracking-wider">WAS</span></div>
+                  <div class="s-icon active flex items-center gap-2 bg-white/[0.03] py-1.5 px-3 rounded-md border border-white/5 transition-all duration-300"><Database class="i-yellow"/><span class="t text-base font-bold text-white tracking-wider">DB</span></div>
                 </div>
               </div>
 
-              <div class="gauge-pair">
-                <div class="big-gauge instrument-green">
-                  <div class="g-wrap car-cluster">
+              <div class="gauge-pair flex justify-center gap-[200px] flex-1 items-center relative">
+                <div class="big-gauge flex flex-col items-center gap-2.5 z-[2] instrument-green">
+                  <div class="g-wrap car-cluster relative w-[200px] h-[200px] rounded-full">
                     <div class="glass-reflection"></div>
-                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg">
-                      <g class="notches">
+                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg rotate-0 w-full h-full overflow-visible">
+                      <g class="notches group">
                         <line v-for="n in 21" :key="n" x1="50" y1="10" x2="50" y2="15" 
                               :transform="`rotate(${((n-1) * 13.5) - 135}, 50, 50)`" 
                               class="tick" :class="{ major: (n-1) % 5 === 0 }"/>
@@ -201,30 +201,30 @@
                       <circle cx="50" cy="50" r="40" class="dial-needle" stroke="url(#greenNeedle)" 
                               style="stroke-dasharray: 160 251; stroke-dashoffset: 0;"/>
                     </svg>
-                    <div class="g-text">
-                      <span class="v-main">10</span>
-                      <div class="instrument-status-grid">
-                        <div class="stat-item standby"><span class="s-val">2</span></div>
-                        <div class="stat-item error"><span class="s-val">1</span></div>
+                    <div class="g-text absolute inset-0 flex flex-col items-center justify-center z-[5]">
+                      <span class="v-main text-[2.5rem] font-bold text-white">10</span>
+                      <div class="instrument-status-grid flex gap-[15px] mt-1.5 py-1 px-3 bg-black/40 border border-white/[0.08] rounded-[20px]">
+                        <div class="stat-item standby flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">2</span></div>
+                        <div class="stat-item error flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">1</span></div>
                       </div>
                     </div>
                   </div>
-                  <span class="g-label">미디어</span>
+                  <span class="g-label text-base text-[#ddd] font-bold uppercase tracking-wider">미디어</span>
                 </div>
 
                 <!-- Mid-Flow: Conversion to Media -->
-                <div class="flow-connector mid-connector to-left">
+                <div class="flow-connector mid-connector to-left w-[200px] h-[100px] absolute left-1/2 z-[1] pointer-events-none">
                   <svg viewBox="0 -20 200 100" class="connector-svg">
                     <path d="M200,50 L0,50" class="flow-line-bg"/>
                     <path d="M200,50 L0,50" class="flow-line-active"/>
                   </svg>
                 </div>
 
-                <div class="big-gauge instrument-green">
-                  <div class="g-wrap car-cluster">
+                <div class="big-gauge flex flex-col items-center gap-2.5 z-[2] instrument-green">
+                  <div class="g-wrap car-cluster relative w-[200px] h-[200px] rounded-full">
                     <div class="glass-reflection"></div>
-                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg">
-                      <g class="notches">
+                    <svg viewBox="0 0 100 100" class="gauge-svg instrument-svg rotate-0 w-full h-full overflow-visible">
+                      <g class="notches group">
                         <line v-for="n in 21" :key="n" x1="50" y1="10" x2="50" y2="15" 
                               :transform="`rotate(${((n-1) * 13.5) - 135}, 50, 50)`" 
                               class="tick" :class="{ major: (n-1) % 5 === 0 }"/>
@@ -233,21 +233,21 @@
                       <circle cx="50" cy="50" r="40" class="dial-needle" stroke="url(#greenNeedle)" 
                               style="stroke-dasharray: 130 251; stroke-dashoffset: 0;"/>
                     </svg>
-                    <div class="g-text">
-                      <span class="v-main">7</span>
-                      <div class="instrument-status-grid">
-                        <div class="stat-item standby"><span class="s-val">1</span></div>
-                        <div class="stat-item error"><span class="s-val">0</span></div>
+                    <div class="g-text absolute inset-0 flex flex-col items-center justify-center z-[5]">
+                      <span class="v-main text-[2.5rem] font-bold text-white">7</span>
+                      <div class="instrument-status-grid flex gap-[15px] mt-1.5 py-1 px-3 bg-black/40 border border-white/[0.08] rounded-[20px]">
+                        <div class="stat-item standby flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">1</span></div>
+                        <div class="stat-item error flex flex-col items-center min-w-[20px]"><span class="s-val text-base font-bold">0</span></div>
                       </div>
                     </div>
                   </div>
-                  <span class="g-label">변환/분배</span>
+                  <span class="g-label text-base text-[#ddd] font-bold uppercase tracking-wider">변환/분배</span>
                 </div>
               </div>
             </div>
 
             <!-- Flow Connector: CCTV to Conversion (Absolute Overlay Expanded) -->
-            <div class="flow-connector to-left">
+            <div class="flow-connector to-left absolute w-[400px] h-[460px] z-[1] pointer-events-none">
               <svg viewBox="150 -50 250 460" class="connector-svg">
                 <path d="M400,65 C200,65 200,230 0,230" class="flow-line-bg"/>
                 <path d="M400,230 L0,230" class="flow-line-bg"/>
@@ -260,35 +260,35 @@
             </div>
 
             <!-- CCTV Column -->
-            <div class="side-column">
-              <span class="col-title">CCTV</span>
-              <div class="gauge-stack">
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+            <div class="w-[140px] flex flex-col gap-5 items-center justify-center m-0 z-[2]">
+              <span class="text-base font-bold text-[#888] border-b-2 border-[#333] w-full text-center pb-2 mb-2.5">CCTV</span>
+              <div class="flex flex-col gap-[30px]">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">48</span><span class="v-alt">/1</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 85 113;"/></svg>
                   </div>
-                  <span class="mini-label">도로공사</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">도로공사</span>
                 </div>
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">40</span><span class="v-alt">/2</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 75 113;"/></svg>
                   </div>
-                  <span class="mini-label">수탁</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">수탁</span>
                 </div>
-                <div class="cctv-item">
-                  <div class="mini-chart cyan">
-                    <div class="mini-inner">
+                <div class="flex flex-col items-center gap-2.5">
+                  <div class="mini-chart cyan relative w-[110px] h-[110px] flex flex-col items-center">
+                    <div class="mini-inner z-[2] mt-[35px] font-bold text-[1.4rem]">
                       <span class="v1">50</span><span class="v-alt">/2</span>
                     </div>
                     <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" class="bg"/><circle cx="20" cy="20" r="18" class="progress" style="stroke-dasharray: 88 113;"/></svg>
                   </div>
-                  <span class="mini-label">비수탁</span>
+                  <span class="mini-label text-base text-[#eee] font-semibold text-center">비수탁</span>
                 </div>
               </div>
             </div>
@@ -297,18 +297,18 @@
       </div>
 
       <!-- Bottom Section -->
-      <div class="bottom-row">
+      <div class="flex-1 flex gap-[15px]">
         <!-- CCTV HQ List -->
-        <div class="cyber-panel list-panel cctv-glow">
-          <div class="panel-cap centered blue-bg-cap">
-            <span class="panel-name">본부별 CCTV 현황</span>
+        <div class="cyber-panel flex-1 rounded flex flex-col relative overflow-hidden cctv-glow">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center">
+            <span class="panel-name text-[0.9rem] font-bold">본부별 CCTV 현황</span>
           </div>
-          <div class="panel-cap centered no-border">
-            <div class="hq-tabs-container">
+          <div class="py-1.5 px-[15px] flex items-center justify-center border-b-0 p-0">
+            <div class="hq-tabs-container flex w-full bg-black/40 border-b border-white/10 overflow-x-auto scrollbar-none">
               <button 
                 v-for="hq in hqs" 
                 :key="hq.id"
-                class="tab-btn"
+                class="tab-btn flex-1 py-2.5 px-1.5 bg-transparent border-0 border-b-2 border-transparent text-[#666] text-[0.85rem] font-extrabold cursor-pointer whitespace-nowrap transition-all duration-300"
                 :class="{ active: activeHQ === hq.id }"
                 @click="activeHQ = hq.id"
               >
@@ -316,14 +316,14 @@
               </button>
             </div>
           </div>
-          <div class="list-container scrolling">
+          <div class="list-container scrolling flex-1 p-2.5 flex flex-col gap-2 overflow-y-auto">
             <div 
               v-for="branch in currentBranches" 
               :key="branch.name"
-              class="hq-item"
+              class="hq-item flex justify-between items-center bg-white/5 p-2.5 rounded border-b border-white/5"
             >
-              <div class="hq-left"><MapPin class="pin-icon"/> {{ branch.name }}</div>
-              <div class="hq-right">
+              <div class="hq-left flex items-center gap-2.5 font-bold text-base"><MapPin class="pin-icon w-[18px]"/> {{ branch.name }}</div>
+              <div class="hq-right flex items-center gap-1.5 text-[1.1rem] font-bold">
                 <span class="green">{{ branch.ok }}</span> / <span class="red">{{ branch.err }}</span> 
               </div>
             </div>
@@ -331,47 +331,47 @@
         </div>
 
         <!-- Traffic Chart 1: Traffic Center -->
-        <div class="cyber-panel list-panel traffic-glow">
-          <div class="panel-cap centered blue-bg-cap"><span class="panel-name">교통센터 네트워크 트래픽</span></div>
-          <div class="traffic-content">
-            <div class="traffic-entry">
-              <div class="t-meta"><span>네트워크 트래픽 (Mbps)</span><span class="peak cyan">1,200 <small>peak</small></span></div>
-              <div class="chart-box"><CyberChart :data="traffic1" color="#00f3ff" label="네트워크 트래픽"/></div>
+        <div class="cyber-panel flex-1 rounded flex flex-col relative overflow-hidden traffic-glow">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center"><span class="panel-name text-[0.9rem] font-bold">교통센터 네트워크 트래픽</span></div>
+          <div class="traffic-content flex-1 p-2.5 flex flex-col gap-2.5">
+            <div class="traffic-entry flex-1 flex flex-col">
+              <div class="t-meta flex justify-between text-xs text-[#666] mb-0.5"><span>네트워크 트래픽 (Mbps)</span><span class="peak cyan font-extrabold text-base text-white">1,200 <small class="text-[0.65rem] font-normal uppercase">peak</small></span></div>
+              <div class="chart-box flex-1 bg-black/40 border border-white/5 rounded overflow-hidden"><CyberChart :data="traffic1" color="#00f3ff" label="네트워크 트래픽"/></div>
             </div>
-            <div class="traffic-entry">
-              <div class="t-meta"><span>실시간 접속자 (명)</span><span class="peak magenta">350 <small>active</small></span></div>
-              <div class="chart-box"><CyberChart :data="users1" color="#ff00ff" label="실시간 접속자"/></div>
+            <div class="traffic-entry flex-1 flex flex-col">
+              <div class="t-meta flex justify-between text-xs text-[#666] mb-0.5"><span>실시간 접속자 (명)</span><span class="peak magenta font-extrabold text-base text-white">350 <small class="text-[0.65rem] font-normal uppercase">active</small></span></div>
+              <div class="chart-box flex-1 bg-black/40 border border-white/5 rounded overflow-hidden"><CyberChart :data="users1" color="#ff00ff" label="실시간 접속자"/></div>
             </div>
           </div>
         </div>
 
         <!-- Traffic Chart 2: Kimcheon HQ -->
-        <div class="cyber-panel list-panel traffic-glow">
-          <div class="panel-cap centered blue-bg-cap"><span class="panel-name">김천본사 네트워크 트래픽</span></div>
-          <div class="traffic-content">
-            <div class="traffic-entry">
-              <div class="t-meta"><span>네트워크 트래픽 (Mbps)</span><span class="peak cyan">1,300 <small>peak</small></span></div>
-              <div class="chart-box"><CyberChart :data="traffic2" color="#00f3ff" label="네트워크 트래픽"/></div>
+        <div class="cyber-panel flex-1 rounded flex flex-col relative overflow-hidden traffic-glow">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center"><span class="panel-name text-[0.9rem] font-bold">김천본사 네트워크 트래픽</span></div>
+          <div class="traffic-content flex-1 p-2.5 flex flex-col gap-2.5">
+            <div class="traffic-entry flex-1 flex flex-col">
+              <div class="t-meta flex justify-between text-xs text-[#666] mb-0.5"><span>네트워크 트래픽 (Mbps)</span><span class="peak cyan font-extrabold text-base text-white">1,300 <small class="text-[0.65rem] font-normal uppercase">peak</small></span></div>
+              <div class="chart-box flex-1 bg-black/40 border border-white/5 rounded overflow-hidden"><CyberChart :data="traffic2" color="#00f3ff" label="네트워크 트래픽"/></div>
             </div>
-            <div class="traffic-entry">
-              <div class="t-meta"><span>실시간 접속자 (명)</span><span class="peak magenta">250 <small>active</small></span></div>
-              <div class="chart-box"><CyberChart :data="users2" color="#ff00ff" label="실시간 접속자"/></div>
+            <div class="traffic-entry flex-1 flex flex-col">
+              <div class="t-meta flex justify-between text-xs text-[#666] mb-0.5"><span>실시간 접속자 (명)</span><span class="peak magenta font-extrabold text-base text-white">250 <small class="text-[0.65rem] font-normal uppercase">active</small></span></div>
+              <div class="chart-box flex-1 bg-black/40 border border-white/5 rounded overflow-hidden"><CyberChart :data="users2" color="#ff00ff" label="실시간 접속자"/></div>
             </div>
           </div>
         </div>
 
         <!-- Alarms -->
-        <div class="cyber-panel list-panel alarm-glow">
-          <div class="panel-cap centered blue-bg-cap"><span class="panel-name">알람이력</span></div>
-          <div class="list-container scrolling">
+        <div class="cyber-panel flex-1 rounded flex flex-col relative overflow-hidden alarm-glow">
+          <div class="panel-cap blue-bg-cap py-1.5 px-[15px] flex items-center justify-center"><span class="panel-name text-[0.9rem] font-bold">알람이력</span></div>
+          <div class="list-container scrolling flex-1 p-2.5 flex flex-col gap-2 overflow-y-auto">
             <div 
               v-for="(alarm, idx) in alarmHistory" 
               :key="idx"
-              class="alarm-box" 
+              class="alarm-box bg-white/[0.03] p-2.5 rounded border-l-4 border-l-[#444]" 
               :class="alarm.level"
             >
-              <div class="a-header">{{ alarm.time }} <span class="tag">{{ alarm.tag }}</span></div>
-              <div class="a-content">{{ alarm.msg }}</div>
+              <div class="a-header text-xs text-[#aaa] flex justify-between mb-1">{{ alarm.time }} <span class="tag font-extrabold rounded-[10px] py-0 px-2 border border-current">{{ alarm.tag }}</span></div>
+              <div class="a-content text-base font-bold text-white">{{ alarm.msg }}</div>
             </div>
           </div>
         </div>
@@ -458,413 +458,3 @@ const alarmHistory = ref([
   { time: '11:02:14 AM', level: 'critical', tag: 'CRITICAL', msg: '주요 간선도로 센서 연결 끊김' }
 ])
 </script>
-
-<style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
-
-.cyber-dashboard {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  background: radial-gradient(circle at 50% 50%, #0d0d1a 0%, #04040a 100%);
-  color: #e0faff;
-  font-family: 'Rajdhani', sans-serif;
-  overflow: hidden;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-}
-
-
-.grid-overlay {
-  position: absolute; inset: 0;
-  background-image: 
-    linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
-  background-size: 50px 50px;
-  pointer-events: none;
-}
-
-.hexagon-overlay {
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%2300f3ff' fill-opacity='0.03' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5z'/%3E%3C/svg%3E");
-  background-size: 56px 98px;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-/* Header */
-.dashboard-header {
-  margin-bottom: 15px;
-  z-index: 10;
-}
-.header-main-title {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 30px 5px 20px;
-  background: rgba(0, 30, 80, 0.6);
-  border-left: 4px solid #00f3ff;
-  border-bottom: 1px solid rgba(0, 150, 255, 0.4);
-  clip-path: polygon(0 0, 95% 0, 100% 100%, 0% 100%);
-  gap: 15px;
-}
-
-.dashboard-logo {
-  height: 24px;
-  width: auto;
-  filter: drop-shadow(0 0 5px rgba(0, 243, 255, 0.5));
-}
-.title-text {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1.1rem;
-  letter-spacing: 2px;
-  color: #fff;
-  text-shadow: 0 0 10px #00f3ff;
-}
-
-/* Base Layout */
-.main-layout {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  z-index: 5;
-}
-
-.top-row {
-  height: 48%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.bottom-row {
-  flex: 1;
-  display: flex;
-  gap: 15px;
-}
-
-/* Panel Design */
-.cyber-panel {
-  background: rgba(16, 20, 32, 0.8);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(0, 243, 255, 0.2);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-}
-.cyber-panel::before {
-  content: ''; position: absolute; top:0; left:0; right:0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 243, 255, 0.8), transparent);
-}
-
-.main-panel { flex: 1; height: 100%; }
-.site-left { box-shadow: 0 0 20px rgba(0, 243, 255, 0.1); }
-.site-right { box-shadow: 0 0 20px rgba(255, 0, 255, 0.1); }
-
-.list-panel { flex: 1; }
-.wide-list-panel { flex: 1; }
-
-.panel-cap {
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.panel-cap.centered { justify-content: center; }
-.panel-cap.no-border { border-bottom: none; padding: 0; }
-.panel-name { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; font-weight: 700; letter-spacing: 1px; }
-
-.blue-bg-cap {
-  background: linear-gradient(90deg, rgba(0, 30, 80, 0.9) 0%, rgba(0, 60, 120, 0.7) 100%) !important;
-  border-bottom: 1px solid rgba(0, 150, 255, 0.5) !important;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
-}
-
-/* HQ Tabs */
-.hq-tabs-container {
-  display: flex;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.hq-tabs-container::-webkit-scrollbar { display: none; }
-
-.tab-btn {
-  flex: 1;
-  padding: 10px 5px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: #666;
-  font-size: 0.85rem;
-  font-weight: 800;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.3s;
-}
-.tab-btn:hover { color: #aaa; background: rgba(255, 255, 255, 0.05); }
-.tab-btn.active {
-  color: #00ffcc;
-  border-bottom-color: #00ffcc;
-  background: rgba(0, 255, 204, 0.05);
-  text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
-}
-
-.panel-content { 
-  flex: 1; 
-  display: flex; 
-  padding: 10px 20px; 
-  gap: 150px; 
-  align-items: center; 
-  justify-content: center;
-  position: relative;
-}
-.side-column { margin: 0; z-index: 2; }
-.center-area { margin: 0; z-index: 2; }
-
-/* Flow Connector (Absolute Overlap) */
-.flow-connector { 
-  position: absolute; 
-  width: 400px; 
-  height: 460px; 
-  top: calc(50% - 15px); /* Nudge up to align with dial center, ignoring labels */
-  transform: translateY(-50%);
-  z-index: 1;
-  pointer-events: none;
-}
-.to-right { left: 80px; }
-.to-left { right: 80px; }
-.connector-svg { width: 100%; height: 100%; overflow: visible; }
-.flow-line-bg { fill: none; stroke: rgba(0, 255, 204, 0.1); stroke-width: 1.5; }
-.flow-line-active {
-  fill: none; stroke: #00ffcc; stroke-width: 2;
-  stroke-dasharray: 8, 30;
-  filter: drop-shadow(0 0 5px #00ffcc);
-  animation: flow-dash 2s linear infinite;
-}
-
-@keyframes flow-dash {
-  from { stroke-dashoffset: 64; }
-  to { stroke-dashoffset: 0; }
-}
-
-/* CDN Flow Connectors */
-.cdn-flow-connector {
-  position: absolute;
-  width: 200px;
-  height: 100px;
-  top: 50%;
-  z-index: 1;
-  pointer-events: none;
-}
-.cdn-flow-connector.from-left { right: 100%; transform: translateY(-70%); }
-.cdn-flow-connector.from-right { left: 100%; transform: translateY(-70%); }
-
-/* Side Column (CCTV) */
-.side-column { width: 140px; display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center; }
-.col-title { font-size: 1rem; font-weight: 700; color: #888; border-bottom: 2px solid #333; width: 100%; text-align: center; padding-bottom: 8px; margin-bottom: 10px; }
-.gauge-stack { display: flex; flex-direction: column; gap: 30px; }
-
-.cctv-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.mini-chart { position: relative; width: 110px; height: 110px; display: flex; flex-direction: column; align-items: center; }
-.mini-chart svg { position: absolute; inset:0; transform: rotate(-90deg); }
-.mini-chart .bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 3; }
-.mini-chart .progress { fill: none; stroke-width: 3; stroke-linecap: round; }
-.mini-chart.cyan .progress { stroke: #00f3ff; filter: drop-shadow(0 0 3px #00f3ff); }
-
-.mini-inner { z-index: 2; margin-top: 35px; font-weight: 700; font-size: 1.4rem; }
-.mini-inner .v1 { color: #00f3ff; text-shadow: 0 0 10px rgba(0, 243, 255, 0.5); }
-.mini-inner .v-alt { color: #ff4d4d; font-size: 1.1rem; }
-.mini-label { font-size: 1rem; color: #eee; font-weight: 600; text-align: center; }
-
-/* Center Area */
-.center-area { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding-top: 5px; }
-.service-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 15px;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 12px 25px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
-  margin-bottom: auto;
-  width: fit-content;
-}
-.site1-theme .service-row { align-self: flex-end; margin-right: 20px; }
-.gangwon-theme .service-row { align-self: flex-start; margin-left: 20px; }
-
-.mode-tag {
-  padding: 4px 14px; border-radius: 6px; font-weight: 800; font-size: 0.9rem; border: 2px solid currentColor;
-}
-.active-mode .mode-tag { color: #00ffcc; background: rgba(0, 255, 204, 0.1); box-shadow: 0 0 15px rgba(0, 255, 204, 0.3); }
-.service-row.active-mode { border-color: rgba(0, 255, 204, 0.4); box-shadow: 0 0 20px rgba(0, 255, 204, 0.1); }
-
-.standby-mode .mode-tag { color: #ffcc00; background: rgba(255, 204, 0, 0.1); }
-.service-row.standby-mode { border-color: rgba(255, 204, 0, 0.4) !important; box-shadow: 0 0 20px rgba(255, 204, 0, 0.1); }
-
-.service-icons { display: flex; gap: 16px; }
-.s-icon { 
-  display: flex; align-items: center; gap: 8px; 
-  background: rgba(255,255,255,0.03); 
-  padding: 6px 12px; border-radius: 6px; 
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.3s ease;
-}
-
-.active-mode .s-icon.active { 
-  border-color: rgba(0, 255, 204, 0.6); 
-  background: rgba(0, 255, 204, 0.15); 
-  box-shadow: 0 0 12px rgba(0, 255, 204, 0.2); 
-}
-
-.standby-mode .s-icon.active { 
-  border-color: rgba(255, 204, 0, 0.6) !important; 
-  background: rgba(255, 204, 0, 0.15) !important; 
-  box-shadow: 0 0 12px rgba(255, 204, 0, 0.2) !important; 
-}
-
-.s-icon .t { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: 1px; }
-.s-icon span[class^="d-"] { width: 8px; height: 8px; border-radius: 50%; }
-.d-cyan { background: #00f3ff; box-shadow: 0 0 8px #00f3ff; }
-.d-green { background: #00ffcc; box-shadow: 0 0 8px #00ffcc; }
-.d-yellow { background: #ffcc00; box-shadow: 0 0 8px #ffcc00; }
-.d-red { background: #ff4d4d; box-shadow: 0 0 8px #ff4d4d; }
-.i-white { color: #fff; width: 20px; }
-.i-blue { color: #00f3ff; width: 20px; }
-.i-green { color: #00ffcc; width: 20px; }
-.i-yellow { color: #ffcc00; width: 20px; }
-
-/* Big Gauges (Car Instrument Style) */
-.gauge-pair { display: flex; justify-content: center; gap: 200px; flex: 1; align-items: center; position: relative; }
-.big-gauge { display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2; }
-.mid-connector {
-  width: 200px;
-  height: 100px;
-  position: absolute;
-  left: 50%;
-  top: calc(50% - 35px); /* Adjusted upward to hit the exact center of the dials */
-  transform: translate(-50%, -50%);
-  z-index: 1;
-}
-.g-wrap.car-cluster { 
-  position: relative; 
-  width: 200px; height: 200px; 
-  background: radial-gradient(circle at 50% 50%, #1a1b25 0%, #050508 100%);
-  border-radius: 50%;
-  border: 4px solid #222;
-  box-shadow: 
-    0 0 30px rgba(0, 0, 0, 0.8),
-    inset 0 0 15px rgba(255, 255, 255, 0.05);
-}
-
-.glass-reflection {
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(255,255,255,0.02) 100%);
-  border-radius: 50%;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.instrument-svg { transform: rotate(0deg); width: 100%; height: 100%; overflow: visible; }
-
-/* Tick Marks */
-.tick { stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; }
-.tick.major { stroke: rgba(255, 255, 255, 0.6); stroke-width: 2; }
-
-.dial-bg { fill: none; stroke: rgba(255, 255, 255, 0.03); stroke-width: 6; stroke-dasharray: 188 251; transform: rotate(135deg); transform-origin: center; }
-.dial-needle { 
-  fill: none; stroke-width: 6; stroke-linecap: butt; 
-  transform: rotate(135deg); transform-origin: center;
-  transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.instrument-green .dial-needle { filter: drop-shadow(0 0 10px rgba(0, 255, 204, 0.5)); }
-
-.g-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; }
-.v-main { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 700; color: #fff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); margin-bottom: -5px; }
-
-.instrument-status-grid { 
-  display: flex; gap: 15px; margin-top: 5px;
-  padding: 4px 12px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-}
-.stat-item { display: flex; flex-direction: column; align-items: center; min-width: 20px; }
-.s-val { font-size: 1rem; font-weight: 700; font-family: 'Orbitron'; }
-
-.stat-item.ok .s-val { color: #00ffcc; }
-.stat-item.standby .s-val { color: #ffcc00; }
-.stat-item.error .s-val { color: #ff3333; }
-
-.instrument-green .v-main { color: #ffffff; }
-
-.g-label { font-size: 1rem; color: #ddd; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
-
-/* CDN Middle */
-.cdn-spacer { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; position: relative; z-index: 20; }
-.cdn-node-box {
-  width: 150px; height: 150px; 
-  background: radial-gradient(circle at 50% 50%, #1a1b25 0%, #050508 100%);
-  border: 2px solid #333; border-radius: 12px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; 
-  box-shadow: 
-    0 0 30px rgba(0, 0, 0, 0.8),
-    inset 0 0 20px rgba(255, 255, 255, 0.02);
-  z-index: 21;
-  transform: translateY(20px);
-}
-.cdn-icon { width: 60px; height: 60px; color: #00d2ff; margin-bottom: 10px; filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.3)); }
-.cdn-name { font-size: 1.4rem; font-weight: 800; color: #fff; letter-spacing: 2px; }
-
-/* List Panels */
-.list-container { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-.list-container.scrolling { overflow-y: auto; }
-
-.alarm-box { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 4px; border-left: 4px solid #444; }
-.alarm-box.critical { border-left-color: #9e4a4a; box-shadow: inset 5px 0 10px rgba(158, 74, 74, 0.1); }
-.alarm-box.warning { border-left-color: #9e8b4a; box-shadow: inset 5px 0 10px rgba(158, 139, 74, 0.1); }
-.alarm-box.info { border-left-color: #4a799e; box-shadow: inset 5px 0 10px rgba(74, 121, 158, 0.1); }
-
-.a-header { font-size: 0.75rem; color: #aaa; display: flex; justify-content: space-between; margin-bottom: 4px; }
-.a-header .tag { font-weight: 800; border-radius: 10px; padding: 0 8px; border: 1px solid currentColor; }
-.a-content { font-size: 1rem; font-weight: 700; color: #fff; }
-
-.hq-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-.hq-left { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; }
-.pin-icon { color: #00f3ff; width: 18px; }
-.hq-right { display: flex; align-items: center; gap: 5px; font-size: 1.1rem; font-weight: 700; }
-.hq-right .green { color: #ffffff; text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); }
-.hq-right .red { color: #ff4d4d; }
-.cam-icon { width: 16px; color: #666; }
-
-/* Traffic Section */
-.traffic-content { flex: 1; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-.traffic-entry { flex: 1; display: flex; flex-direction: column; }
-.t-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-bottom: 2px; }
-.t-meta .peak { font-weight: 800; font-size: 1rem; font-family: 'Orbitron'; }
-.t-meta .peak small { font-size: 0.65rem; font-weight: 400; opacity: 0.6; margin-left: 2px; text-transform: uppercase; }
-.t-meta .peak.cyan { color: #ffffff; }
-.t-meta .peak.green { color: #ffffff; }
-.t-meta .peak.magenta { color: #ffffff; }
-.t-meta .peak.amber { color: #ffffff; }
-.chart-box { flex: 1; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; }
-
-
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-inner { background: #333; border-radius: 2px; }
-
-@keyframes rotate-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-</style>

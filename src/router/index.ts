@@ -67,29 +67,29 @@ const router = createRouter({
 })
 
 /** 로그인하지 않으면 로그인 페이지로만 이동 가능. 쿠키로 /me 호출해 복원. */
-router.beforeEach(async (to, _from, next) => {
-  const authStore = useAuthStore()
-  const isLoginPage = to.name === 'Login'
+// router.beforeEach(async (to, _from, next) => {
+//   const authStore = useAuthStore()
+//   const isLoginPage = to.name === 'Login'
 
-  if (!authStore.authReady) {
-    await authStore.fetchUser(api)
-  }
+//   if (!authStore.authReady) {
+//     await authStore.fetchUser(api)
+//   }
 
-  if (isLoginPage) {
-    if (authStore.isAuthenticated) {
-      next({ path: '/', replace: true })
-    } else {
-      next()
-    }
-    return
-  }
+//   if (isLoginPage) {
+//     if (authStore.isAuthenticated) {
+//       next({ path: '/', replace: true })
+//     } else {
+//       next()
+//     }
+//     return
+//   }
 
-  if (!authStore.isAuthenticated) {
-    next({ path: '/login', replace: true })
-    return
-  }
-  next()
-})
+//   if (!authStore.isAuthenticated) {
+//     next({ path: '/login', replace: true })
+//     return
+//   }
+//   next()
+// })
 
 export default router
 
