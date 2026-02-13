@@ -41,6 +41,8 @@ const isHovered = ref(false)
 const navItems = [
   { id: 'DashboardPopupView', label: '대시보드', icon: Monitor },
   { id: 'Dashboard2View', label: '대시보드2', icon: LayoutDashboard },
+  { id: 'Dashboard3View', label: '대시보드3', icon: LayoutDashboard },
+  { id: 'Dashboard4View', label: '대시보드4', icon: LayoutDashboard },
   { id: 'SystemStatusView', label: '시스템 현황', icon: LayoutDashboard },
   { id: 'ServerStatusView', label: '서버별 현황', icon: Activity },
   { id: 'VideoView', label: '영상 보기', icon: Video },
@@ -76,6 +78,36 @@ const handleNavigate = (itemId: string) => {
     window.open(
       routeData.href,
       'Dashboard2View',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+    )
+    return
+  }
+  
+  if (itemId === 'Dashboard3View') {
+    const width = 1920
+    const height = 1080
+    const left = (window.screen.width - width) / 2
+    const top = (window.screen.height - height) / 2
+    // Use router to resolve URL for hash mode compatibility
+    const routeData = router.resolve({ name: 'Dashboard3Popup' })
+    window.open(
+      routeData.href,
+      'Dashboard3View',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+    )
+    return
+  }
+
+  if (itemId === 'Dashboard4View') {
+    const width = 1920
+    const height = 1080
+    const left = (window.screen.width - width) / 2
+    const top = (window.screen.height - height) / 2
+    // Use router to resolve URL for hash mode compatibility
+    const routeData = router.resolve({ name: 'Dashboard4Popup' })
+    window.open(
+      routeData.href,
+      'Dashboard4View',
       `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
     )
     return

@@ -23,6 +23,16 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../components/views/Dashboard2View.vue')
   },
   {
+    path: '/Dashboard3View',
+    name: 'Dashboard3Popup',
+    component: () => import('../components/views/Dashboard3View.vue')
+  },
+  {
+    path: '/Dashboard4View',
+    name: 'Dashboard4Popup',
+    component: () => import('../components/views/Dashboard4View.vue')
+  },
+  {
     path: '/SystemStatusView',
     name: 'SystemStatus',
     component: () => import('../components/views/SystemStatusView.vue')
