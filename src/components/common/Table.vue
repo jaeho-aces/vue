@@ -1,5 +1,5 @@
 <template>
-  <div class="reusable-table-wrapper">
+  <div class="table-root">
     <!-- 데이터 입력/수정 모달 -->
     <DataFormModal
       v-if="formFields && formFields.length > 0"
@@ -17,22 +17,22 @@
       <Transition name="modal">
         <div
           v-if="isDeleteConfirmOpen"
-          class="delete-confirm-overlay"
+          class="table-delete-confirm-overlay"
           @mousedown.self="deleteConfirmMousedownOnOverlay = true"
           @mouseup.self="handleDeleteConfirmOverlayMouseUp"
         >
-          <div class="delete-confirm-container" @mousedown.stop @click.stop>
-            <div class="delete-confirm-header">
-              <span class="delete-confirm-icon">⚠</span>
-              <h2 class="delete-confirm-title">삭제 확인</h2>
-              <button type="button" class="delete-confirm-close" @click="handleDeleteConfirmCancel" aria-label="닫기">×</button>
+          <div class="table-delete-confirm-container" @mousedown.stop @click.stop>
+            <div class="table-delete-confirm-header">
+              <span class="table-delete-confirm-icon">⚠</span>
+              <h2 class="table-delete-confirm-title">삭제 확인</h2>
+              <button type="button" class="table-delete-confirm-close" @click="handleDeleteConfirmCancel" aria-label="닫기">×</button>
             </div>
-            <div class="delete-confirm-body">
-              <p class="delete-confirm-message">{{ deleteConfirmMessage }}</p>
+            <div class="table-delete-confirm-body">
+              <p class="table-delete-confirm-message">{{ deleteConfirmMessage }}</p>
             </div>
-            <div class="delete-confirm-footer">
-              <button type="button" class="delete-confirm-btn cancel" @click="handleDeleteConfirmCancel">취소</button>
-              <button type="button" class="delete-confirm-btn confirm" @click="handleDeleteConfirm">삭제</button>
+            <div class="table-delete-confirm-footer">
+              <button type="button" class="table-delete-confirm-btn cancel" @click="handleDeleteConfirmCancel">취소</button>
+              <button type="button" class="table-delete-confirm-btn confirm" @click="handleDeleteConfirm">삭제</button>
             </div>
           </div>
         </div>
@@ -40,33 +40,33 @@
     </Teleport>
 
     <!-- 상단 툴바 (컬럼 선택 + 버튼) -->
-    <div class="top-toolbar">
-      <div class="toolbar-left">
-        <div class="column-selector-container">
-          <div class="column-selector-wrapper" ref="columnSelectorRef">
+    <div class="table-toolbar">
+      <div class="table-toolbar-left">
+        <div class="table-column-selector-container">
+          <div class="table-column-selector-wrapper" ref="columnSelectorRef">
             <button 
               @click="isColumnDropdownOpen = !isColumnDropdownOpen"
-              class="column-selector-button"
+              class="table-column-selector-button"
             >
               컬럼 선택
-              <span class="dropdown-arrow" :class="{ 'open': isColumnDropdownOpen }">▼</span>
+              <span class="table-dropdown-arrow" :class="{ 'open': isColumnDropdownOpen }">▼</span>
             </button>
-            <div v-if="isColumnDropdownOpen" class="column-dropdown">
-              <div class="dropdown-header">
+            <div v-if="isColumnDropdownOpen" class="table-column-dropdown">
+              <div class="table-dropdown-header">
                 <span>표시할 컬럼 선택</span>
-                <button @click="isColumnDropdownOpen = false" class="close-button">×</button>
+                <button @click="isColumnDropdownOpen = false" class="table-close-button">×</button>
               </div>
-              <div class="dropdown-content">
+              <div class="table-dropdown-content">
                 <label 
                   v-for="column in columns" 
                   :key="column.id"
-                  class="column-checkbox-label"
+                  class="table-column-checkbox-label"
                 >
                   <input
                     type="checkbox"
                     :checked="visibleColumns.has(column.id)"
                     @change="toggleColumn(column.id)"
-                    class="column-checkbox"
+                    class="table-column-checkbox"
                   />
                   <span>{{ column.header }}</span>
                 </label>
@@ -75,17 +75,17 @@
           </div>
         </div>
         <!-- 데이터 개수 표시 -->
-        <div class="data-count-info">
-          <span class="data-count-text">
+        <div class="table-data-count-info">
+          <span class="table-data-count-text">
             전체: <strong>{{ totalDataCount }}</strong>개
-            <span v-if="filteredDataCount !== totalDataCount" class="filtered-count">
+            <span v-if="filteredDataCount !== totalDataCount" class="table-filtered-count">
               (표시: <strong>{{ filteredDataCount }}</strong>개)
             </span>
           </span>
         </div>
       </div>
-      <div class="toolbar-right">
-        <div class="button-group">
+      <div class="table-toolbar-right">
+        <div class="table-button-group">
           <!-- 커스텀 버튼 슬롯 (기본 버튼 왼쪽) -->
           <slot name="toolbar-actions-left"></slot>
           <Button @click="handleNew" variant="primary">
@@ -115,9 +115,9 @@
         :style="{ width: needsHorizontalScroll ? `${effectiveTableWidth}px` : '100%' }"
       >
       <!-- 헤더 -->
-      <div class="table-header sticky top-0 z-10 bg-slate-50">
+      <div class="table-header-bar">
         <div
-          class="grid-header"
+          class="table-grid-header"
           :style="{
             gridTemplateColumns: gridTemplateColumns,
             gridTemplateRows: '40px',
@@ -126,74 +126,74 @@
         >
           <!-- 체크박스 컬럼 -->
           <div
-            class="header-cell bg-slate-100 sticky-checkbox-column"
+            class="table-header-cell table-sticky-checkbox-column bg-slate-100"
           >
-            <div class="header-content">
+            <div class="table-header-content">
               <input
                 type="checkbox"
                 :checked="isAllSelected"
                 @change="handleSelectAll"
-                class="checkbox-input"
+                class="table-checkbox-input"
               />
             </div>
           </div>
           <!-- ID 컬럼 (idField가 있을 때만 표시) -->
           <div
             v-if="idField && idField.trim() !== '' && !hideIdColumn"
-            class="header-cell bg-slate-100 border-r sticky-id-column"
-            :class="{ 'filtered': columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
+            class="table-header-cell table-sticky-id-column bg-slate-100 border-r"
+            :class="{ 'table-filtered': columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
             :style="{ 
               left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
               borderLeft: '1px solid #e2e8f0' 
             }"
           >
-            <div class="header-content">
+            <div class="table-header-content">
               <span>ID</span>
               <button
                 @click.stop="toggleFilterDropdown(idField, $event)"
-                class="filter-button"
+                class="table-filter-button"
                 :class="{ active: openFilterDropdown === idField || columnFilters[idField]?.search || table.getColumn(idField)?.getIsSorted() }"
               >
-                <span class="filter-icon">🔍</span>
+                <span class="table-filter-icon">🔍</span>
               </button>
             </div>
             <div
-              class="resize-handle"
+              class="table-resize-handle"
               @mousedown.stop="handleResizeStart(idField, $event.clientX, getColumnWidth(idField, idColumnWidth))"
             ></div>
             <!-- 필터 드롭다운 -->
-            <div v-if="openFilterDropdown === idField" class="filter-dropdown">
-              <div class="filter-section">
-                <div class="filter-section-title">정렬</div>
-                <div class="filter-options">
+            <div v-if="openFilterDropdown === idField" class="table-filter-dropdown">
+              <div class="table-filter-section">
+                <div class="table-filter-section-title">정렬</div>
+                <div class="table-filter-options">
                   <button
                     @click="handleSort(idField, 'asc')"
-                    :class="['filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'asc' }]"
+                    :class="['table-filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'asc' }]"
                   >
                     오름차순
                   </button>
                   <button
                     @click="handleSort(idField, 'desc')"
-                    :class="['filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'desc' }]"
+                    :class="['table-filter-option', { active: table.getColumn(idField)?.getIsSorted() === 'desc' }]"
                   >
                     내림차순
                   </button>
                 </div>
               </div>
-              <div class="filter-section">
-                <div class="filter-section-title">검색</div>
+              <div class="table-filter-section">
+                <div class="table-filter-section-title">검색</div>
                 <input
                   :value="columnFilters[idField]?.search || ''"
                   @input="(e) => { if (!columnFilters[idField]) columnFilters[idField] = { search: '' }; columnFilters[idField].search = (e.target as HTMLInputElement).value }"
                   type="text"
                   placeholder="검색..."
-                  class="filter-search-input"
+                  class="table-filter-search-input"
                 />
               </div>
-              <div class="filter-section">
+              <div class="table-filter-section">
                 <button
                   @click="clearFilter(idField)"
-                  class="filter-clear-button"
+                  class="table-filter-clear-button"
                   :disabled="!columnFilters[idField]?.search && !table.getColumn(idField)?.getIsSorted()"
                 >
                   필터 해제
@@ -204,56 +204,56 @@
           <!-- 모든 컬럼 헤더 -->
           <template v-for="column in visibleColumnsList" :key="column.id">
             <div 
-              class="header-cell"
-              :class="{ 'filtered': columnFilters[column.id]?.search || table.getColumn(column.id)?.getIsSorted() }"
+              class="table-header-cell"
+              :class="{ 'table-filtered': columnFilters[column.id]?.search || table.getColumn(column.id)?.getIsSorted() }"
             >
-              <div class="header-content">
+              <div class="table-header-content">
                 <span>{{ column.header }}</span>
                 <button
                   @click.stop="toggleFilterDropdown(column.id, $event)"
-                  class="filter-button"
+                  class="table-filter-button"
                   :class="{ active: openFilterDropdown === column.id || columnFilters[column.id]?.search || table.getColumn(column.id)?.getIsSorted() }"
                 >
-                  <span class="filter-icon">🔍</span>
+                  <span class="table-filter-icon">🔍</span>
                 </button>
               </div>
               <div
-                class="resize-handle"
+                class="table-resize-handle"
                 @mousedown.stop="handleResizeStart(column.id, $event.clientX, getColumnWidth(column.id, column.size))"
               ></div>
               <!-- 필터 드롭다운 -->
-              <div v-if="openFilterDropdown === column.id" class="filter-dropdown">
-                <div class="filter-section">
-                  <div class="filter-section-title">정렬</div>
-                  <div class="filter-options">
+              <div v-if="openFilterDropdown === column.id" class="table-filter-dropdown">
+                <div class="table-filter-section">
+                  <div class="table-filter-section-title">정렬</div>
+                  <div class="table-filter-options">
                     <button
                       @click="handleSort(column.id, 'asc')"
-                      :class="['filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'asc' }]"
+                      :class="['table-filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'asc' }]"
                     >
                       오름차순
                     </button>
                     <button
                       @click="handleSort(column.id, 'desc')"
-                      :class="['filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'desc' }]"
+                      :class="['table-filter-option', { active: table.getColumn(column.id)?.getIsSorted() === 'desc' }]"
                     >
                       내림차순
                     </button>
                   </div>
                 </div>
-                <div class="filter-section">
-                  <div class="filter-section-title">검색</div>
+                <div class="table-filter-section">
+                  <div class="table-filter-section-title">검색</div>
                   <input
                     :value="columnFilters[column.id]?.search || ''"
                     @input="(e) => { if (!columnFilters[column.id]) columnFilters[column.id] = { search: '' }; columnFilters[column.id].search = (e.target as HTMLInputElement).value }"
                     type="text"
                     placeholder="검색..."
-                    class="filter-search-input"
+                    class="table-filter-search-input"
                   />
                 </div>
-                <div class="filter-section">
+                <div class="table-filter-section">
                   <button
                     @click="clearFilter(column.id)"
-                    class="filter-clear-button"
+                    class="table-filter-clear-button"
                     :disabled="!columnFilters[column.id]?.search && !table.getColumn(column.id)?.getIsSorted()"
                   >
                     필터 해제
@@ -274,11 +274,11 @@
         <template v-for="virtualRow in virtualizer.getVirtualItems()" :key="`${virtualRow.key}-${sortedRowsHash?.substring?.(0, 8) || ''}`">
           <!-- 각 데이터 항목을 개별적으로 배치 (1행) -->
           <div
-            class="data-item-wrapper"
+            class="table-data-item-wrapper"
             :class="{
-              'data-item-even': virtualRow.index % 2 === 0,
-              'data-item-odd': virtualRow.index % 2 === 1,
-              'data-item-selected': isRowSelected(getRowId(sortedRows[virtualRow.index]?.original))
+              'table-data-item-even': virtualRow.index % 2 === 0,
+              'table-data-item-odd': virtualRow.index % 2 === 1,
+              'table-data-item-selected': isRowSelected(getRowId(sortedRows[virtualRow.index]?.original))
             }"
             :style="{
               position: 'absolute',
@@ -290,7 +290,7 @@
             @click="handleRowClick(getRowId(sortedRows[virtualRow.index]?.original))"
           >
             <div
-              class="grid-row"
+              class="table-grid-row"
               :style="{
                 gridTemplateColumns: gridTemplateColumns,
                 gridTemplateRows: '40px',
@@ -299,7 +299,7 @@
             >
               <!-- 체크박스 컬럼 (클릭 시 행 클릭과 중복 방지) -->
               <div
-                class="data-cell data-cell-checkbox sticky-checkbox-column"
+                class="table-data-cell table-data-cell-checkbox table-sticky-checkbox-column"
                 :style="{ left: '0px' }"
                 @click.stop
               >
@@ -307,13 +307,13 @@
                   type="checkbox"
                   :checked="isRowSelected(getRowId(sortedRows[virtualRow.index]?.original))"
                   @change="handleRowSelect(getRowId(sortedRows[virtualRow.index]?.original), $event)"
-                  class="checkbox-input"
+                  class="table-checkbox-input"
                 />
               </div>
               <!-- ID 컬럼 (idField가 있을 때만 표시) -->
               <div
                 v-if="idField && idField.trim() !== '' && !hideIdColumn"
-                class="data-cell data-cell-id border-r border-slate-300 font-medium sticky-id-column"
+                class="table-data-cell table-data-cell-id table-sticky-id-column border-r border-slate-300 font-medium"
                 :style="{ 
                   left: `${getColumnWidth('checkbox', checkboxColumnWidth)}px`,
                   borderLeft: '1px solid #e2e8f0' 
@@ -323,7 +323,7 @@
               </div>
               <!-- 모든 컬럼 데이터 -->
               <template v-for="column in visibleColumnsList" :key="column.id">
-                <div class="data-cell hover:bg-slate-50 transition-colors">
+                <div class="table-data-cell hover:bg-slate-50 transition-colors">
                   <component
                     v-if="column.cellComponent"
                     :is="column.cellComponent"
@@ -369,7 +369,7 @@ interface Props {
   defaultVisibleColumns?: string[] | Set<string>
   formFields?: FormField[]
   modalTitle?: string
-  modalSize?: 'default' | 'large'
+  modalSize?: 'default' | 'large' | 'xlarge'
   checkboxColumnWidth?: number
   idColumnWidth?: number
   idField?: string
@@ -964,7 +964,7 @@ onMounted(() => {
     
     // 2. 필터 드롭다운 처리
     if (openFilterDropdown.value && !isFilterButtonClicking.value) {
-      const isFilterRelated = target.closest('.filter-button') || target.closest('.filter-dropdown')
+      const isFilterRelated = target.closest('.table-filter-button') || target.closest('.table-filter-dropdown')
       if (!isFilterRelated) {
         openFilterDropdown.value = null
       }
@@ -1022,694 +1022,4 @@ defineExpose({
 })
 </script>
 
-<style scoped>
-.reusable-table-wrapper {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  min-height: 0;
-}
-
-.table-container {
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
-  background-color: #ffffff;
-  min-height: 0;
-  flex: 1;
-}
-
-.table-wrapper {
-  position: relative;
-  width: 100%;
-  min-width: 0;
-}
-
-
-
-.table-header {
-  position: sticky;
-  top: 0;
-  left: 0;
-  z-index: 30;
-  background-color: #f8fafc;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.top-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  gap: 16px;
-}
-
-.data-count-info {
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-}
-
-.data-count-text {
-  font-size: 0.875rem;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.data-count-text strong {
-  color: #334155;
-  font-weight: 600;
-}
-
-.filtered-count {
-  color: #3b82f6;
-  margin-left: 4px;
-}
-
-.filtered-count strong {
-  color: #2563eb;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-  margin-left: auto;
-}
-
-.button-group {
-  display: flex;
-  gap: 16px;
-}
-
-.grid-header {
-  display: grid;
-  grid-template-rows: 40px;
-  border-collapse: collapse;
-  box-sizing: border-box;
-}
-
-.grid-header .header-cell {
-  box-sizing: border-box;
-  text-align: center;
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #475569;
-  border-bottom: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background-color 0.2s;
-  overflow: visible;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.grid-header .header-cell.filtered {
-  background-color: #dbeafe;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.grid-row {
-  display: grid;
-  grid-template-rows: 40px;
-  border-collapse: collapse;
-  box-sizing: border-box;
-}
-
-.data-cell:not(.data-cell-id) {
-  border-right: 1px solid #e2e8f0;
-}
-
-.data-cell-id {
-  font-weight: 600;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-right: 1px solid #e2e8f0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.sticky-checkbox-column {
-  position: sticky;
-  left: 0;
-  z-index: 20;
-}
-
-.sticky-id-column {
-  position: sticky;
-  z-index: 20;
-}
-
-.table-header .sticky-checkbox-column {
-  background-color: #f1f5f9 !important;
-  z-index: 40;
-  position: sticky;
-  left: 0;
-}
-
-.table-header .sticky-id-column {
-  background-color: #f1f5f9 !important;
-  z-index: 40;
-  position: sticky;
-}
-
-.table-header .sticky-id-column.filtered {
-  background-color: #e2e8f0 !important;
-}
-
-.data-cell {
-  box-sizing: border-box;
-  text-align: center;
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  color: #334155;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-
-.table-body {
-  position: relative;
-  overflow: visible;
-}
-
-.data-item-wrapper {
-  position: absolute;
-  border-bottom: 2px solid #e2e8f0;
-  cursor: pointer;
-}
-
-.data-item-even {
-  background-color: #ffffff;
-}
-
-.data-item-odd {
-  background-color: #f9fafb;
-}
-
-/* 컬럼 선택 드롭다운 스타일 */
-.column-selector-container {
-  display: flex;
-  align-items: center;
-}
-
-.column-selector-wrapper {
-  position: relative;
-}
-
-.column-selector-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #475569;
-  transition: all 0.2s;
-}
-
-.column-selector-button:hover {
-  background-color: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-.dropdown-arrow {
-  font-size: 0.75rem;
-  transition: transform 0.2s;
-}
-
-.dropdown-arrow.open {
-  transform: rotate(180deg);
-}
-
-.column-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 100;
-  min-width: 200px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.dropdown-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: #334155;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.close-button:hover {
-  background-color: #f1f5f9;
-}
-
-.dropdown-content {
-  padding: 8px;
-}
-
-.column-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  font-size: 0.875rem;
-  color: #475569;
-}
-
-.column-checkbox-label:hover {
-  background-color: #f1f5f9;
-}
-
-.column-checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #3b82f6;
-}
-
-/* 필터 버튼 및 드롭다운 스타일 */
-.filter-button {
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  margin-left: 4px;
-  position: relative;
-}
-
-.filter-button:hover {
-  background-color: #f1f5f9;
-}
-
-.filter-button.active {
-  background-color: #e0f2fe;
-  color: #2563eb;
-}
-
-.filter-icon {
-  font-size: 0.75rem;
-  line-height: 1;
-}
-
-.filter-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  z-index: 1000;
-  min-width: 200px;
-  max-width: 300px;
-  padding: 12px;
-  display: block !important;
-}
-
-.filter-section {
-  margin-bottom: 12px;
-}
-
-.filter-section:last-child {
-  margin-bottom: 0;
-}
-
-.filter-section-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #64748b;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.filter-options {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-option {
-  padding: 6px 12px;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: all 0.2s;
-}
-
-.filter-option:hover {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-}
-
-.filter-option.active {
-  background-color: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
-}
-
-.filter-search-input {
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.filter-search-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.filter-clear-button {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: #ef4444;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.filter-clear-button:hover:not(:disabled) {
-  background-color: #dc2626;
-}
-
-.filter-clear-button:disabled {
-  background-color: #e2e8f0;
-  color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.header-cell {
-  position: relative;
-}
-
-.checkbox-input {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: #3b82f6;
-}
-
-.grid-header .header-cell.sticky-checkbox-column {
-  padding: 0.75rem 0;
-  min-width: 0;
-}
-
-.grid-header .header-cell.sticky-checkbox-column .header-content {
-  justify-content: center;
-  padding: 0;
-  width: 100%;
-}
-
-.data-cell-checkbox {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8fafc;
-  padding: 0.75rem 0;
-  min-width: 0;
-}
-
-.data-item-even .data-cell-checkbox {
-  background-color: #ffffff;
-}
-
-.data-item-odd .data-cell-checkbox {
-  background-color: #f9fafb;
-}
-
-/* 체크박스로 선택된 행 배경 */
-.data-item-selected .data-cell,
-.data-item-selected .data-cell-checkbox,
-.data-item-selected .data-cell-id {
-  background-color: #dbeafe !important;
-}
-
-.data-item-selected:hover .data-cell,
-.data-item-selected:hover .data-cell-checkbox,
-.data-item-selected:hover .data-cell-id {
-  background-color: #bfdbfe !important;
-}
-
-.table-header .sticky-checkbox-column {
-  background-color: #f1f5f9 !important;
-}
-
-.resize-handle {
-  position: absolute;
-  top: 0;
-  right: -4px;
-  width: 8px;
-  height: 100%;
-  cursor: col-resize;
-  z-index: 10;
-  background: transparent;
-}
-
-.resize-handle:hover {
-  background-color: rgba(59, 130, 246, 0.2);
-}
-
-.header-cell:hover .resize-handle {
-  background-color: rgba(59, 130, 246, 0.1);
-}
-
-/* 버튼 관련 스타일은 Button.vue 컴포넌트에 포함되어 있음 */
-
-/* 삭제 확인 모달 */
-.delete-confirm-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: 20px;
-}
-
-.delete-confirm-container {
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  width: 100%;
-  max-width: 420px;
-  overflow: hidden;
-}
-
-.delete-confirm-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-}
-
-.delete-confirm-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ef4444;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.delete-confirm-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-  flex: 1;
-}
-
-.delete-confirm-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: #64748b;
-  cursor: pointer;
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.delete-confirm-close:hover {
-  background-color: rgba(0, 0, 0, 0.06);
-  color: #1e293b;
-}
-
-.delete-confirm-body {
-  padding: 24px 20px;
-}
-
-.delete-confirm-message {
-  margin: 0;
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  color: #334155;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.delete-confirm-footer {
-  padding: 16px 20px;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.delete-confirm-btn {
-  min-width: 88px;
-  padding: 10px 20px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.delete-confirm-btn.cancel {
-  background-color: #f1f5f9;
-  color: #475569;
-}
-
-.delete-confirm-btn.cancel:hover {
-  background-color: #e2e8f0;
-  color: #1e293b;
-}
-
-.delete-confirm-btn.confirm {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: #fff;
-  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);
-}
-
-.delete-confirm-btn.confirm:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
-}
-
-.delete-confirm-btn:active {
-  transform: scale(0.98);
-}
-
-/* 삭제 확인 모달 트랜지션 */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-.modal-enter-active .delete-confirm-container,
-.modal-leave-active .delete-confirm-container {
-  transition: transform 0.2s ease;
-}
-.modal-enter-from .delete-confirm-container,
-.modal-leave-to .delete-confirm-container {
-  transform: scale(0.95);
-}
-</style>
 

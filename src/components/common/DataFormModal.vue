@@ -7,15 +7,15 @@
         @mousedown.self="mousedownOnOverlay = true"
         @mouseup.self="handleOverlayMouseUp"
       >
-        <div class="modal-container" :class="{ 'modal-container--large': size === 'large' }" @mousedown.stop>
+        <div class="modal-container" :class="{ 'modal-container--large': size === 'large', 'modal-container--xlarge': size === 'xlarge' }" @mousedown.stop>
           <div class="modal-header">
             <h2 class="modal-title">{{ isEditMode ? '수정' : '신규' }} {{ title }}</h2>
             <button class="modal-close-button" @click="handleClose">×</button>
           </div>
           
-          <div class="modal-body" :class="{ 'modal-body--large': size === 'large' }">
+          <div class="modal-body" :class="{ 'modal-body--large': size === 'large', 'modal-body--xlarge': size === 'xlarge' }">
             <!-- 모달이 열릴 때마다 formKey로 폼을 새로 그려서 v-model 바인딩이 깨지는 현상 방지 -->
-            <form :key="formKey" @submit.prevent="handleSubmit" class="form-container" :class="{ 'form-container--large': size === 'large' }">
+            <form :key="formKey" @submit.prevent="handleSubmit" class="form-container" :class="{ 'form-container--large': size === 'large', 'form-container--xlarge': size === 'xlarge' }">
               <template v-for="field in fields" :key="field.id">
                 <!-- 숨김 필드: 레이블 없이 input만 -->
                 <input
@@ -29,7 +29,7 @@
                   class="form-field"
                   :class="{
                     'form-field--wide':
-                      size === 'large' && ['enc_url', 'hls_url', 'public_url'].includes(field.id)
+                      (size === 'large' || size === 'xlarge') && ['enc_url', 'hls_url', 'public_url'].includes(field.id)
                   }"
                 >
                 <label :for="field.id" class="form-label">
@@ -245,7 +245,7 @@ interface Props {
   title: string
   fields: FormField[]
   initialData?: Record<string, any>
-  size?: 'default' | 'large'
+  size?: 'default' | 'large' | 'xlarge'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -460,6 +460,11 @@ const handleSubmit = () => {
   max-width: 1200px;
 }
 
+.modal-container--xlarge {
+  max-width: 1400px;
+  max-height: 95vh;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -507,6 +512,11 @@ const handleSubmit = () => {
   padding: 16px;
 }
 
+.modal-body--xlarge {
+  padding: 16px;
+  overflow: visible;
+}
+
 .form-container {
   display: flex;
   flex-direction: column;
@@ -538,6 +548,34 @@ const handleSubmit = () => {
 }
 
 .form-container--large .form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.form-container--xlarge {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px 16px;
+}
+
+.form-container--xlarge > input[type="hidden"] {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form-container--xlarge .form-field {
+  gap: 4px;
+}
+
+.form-container--xlarge .form-hint {
+  font-size: 0.75rem;
+}
+
+.form-container--xlarge .form-field--wide {
   grid-column: 1 / -1;
 }
 

@@ -6,6 +6,7 @@
     :default-visible-columns="defaultVisibleColumns"
     :form-fields="formFields"
     modal-title="영상변환 채널정보"
+    modal-size="xlarge"
     :checkbox-column-width="checkboxColumnWidth"
     :id-column-width="idColumnWidth"
     id-field="ch_id"
@@ -41,11 +42,17 @@ import DataFormModal from '../../common/DataFormModal.vue'
 import { useVideoConversionInfoStore, type VideoConversion } from '../../../stores/videoConversionInfo'
 import { useCommonCodeStore } from '../../../stores/commonCode'
 import { useAlertStore } from '../../../stores/alert'
+import { useCameraInfoStore } from '../../../stores/cameraInfo'
+import { useVideoConversionServerInfoStore } from '../../../stores/videoConversionServerInfo'
+import { useMediaServerInfoStore } from '../../../stores/mediaServerInfo'
 
 // Pinia 스토어 사용
 const videoConversionStore = useVideoConversionInfoStore()
 const commonCodeStore = useCommonCodeStore()
 const alertStore = useAlertStore()
+const cameraStore = useCameraInfoStore()
+const conversionServerStore = useVideoConversionServerInfoStore()
+const mediaServerStore = useMediaServerInfoStore()
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // Table 컴포넌트 참조
@@ -170,13 +177,14 @@ const idColumnWidth = 120
 
 // 컬럼 정의 (백엔드 스키마에 맞춤 - 실제 필드명은 API 응답 확인 후 수정 필요)
 const columns: TableColumn[] = [
-  { id: 'ch_id', header: '채널 구분자', size: 120, cellComponent: TextCell },
   { id: 'hq_code', header: '소속 본부', size: 120, cellComponent: TextCell }, // UI 매핑 필드
   { id: 'branch_code', header: '소속 지사', size: 120, cellComponent: TextCell }, // UI 매핑 필드
   { id: 'route_code', header: '노선', size: 120, cellComponent: TextCell }, // UI 매핑 필드
   { id: 'cctv_id', header: 'CCTV ID', size: 140, cellComponent: TextCell },
   { id: 'trans_id', header: '영상변환 서버 ID', size: 140, cellComponent: TextCell },
+  { id: 'trans_name', header: '영상 변환 서버', size: 140, cellComponent: TextCell },
   { id: 'fms_id', header: '미디어 서버 ID', size: 140, cellComponent: TextCell },
+  { id: 'fms_name', header: '미디어 서버', size: 140, cellComponent: TextCell },
   { id: 'ch_venc', header: '인코딩 방식', size: 100, cellComponent: VideoFormatCell },
   { id: 'ch_vsize', header: '영상 크기', size: 100, cellComponent: ResolutionCell },
   { id: 'ch_vfps', header: 'FPS', size: 80, cellComponent: TextCell },
@@ -184,7 +192,6 @@ const columns: TableColumn[] = [
   { id: 'ch_alive', header: '동작여부', size: 80, cellComponent: StatusCell },
   { id: 'ch_alive_time', header: '최종 확인 시간', size: 160, cellComponent: DateOnlyCell },
   { id: 'ch_alive_yn', header: '동작 확인 여부', size: 100, cellComponent: YesNoCell },
-  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: DateOnlyCell },
   { id: 'job_status', header: '동작 상태', size: 100, cellComponent: TextCell },
   { id: 'json_job', header: 'JSON 작업', size: 100, cellComponent: YesNoCell },
   { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell },
@@ -195,31 +202,59 @@ const columns: TableColumn[] = [
   { id: 'sms_session', header: 'SMS 세션', size: 140, cellComponent: TextCell },
   { id: 'sms_host_ip', header: 'SMS 호스트 IP', size: 140, cellComponent: TextCell },
   { id: 'ch_jpg_size', header: 'JPG 크기', size: 100, cellComponent: OutputResolutionCell },
-  { id: 'ch_jpg_kbps', header: 'JPG BPS', size: 100, cellComponent: TextCell }
+  { id: 'ch_jpg_kbps', header: 'JPG BPS', size: 100, cellComponent: TextCell },
+  { id: 'reg_date', header: '등록 일자', size: 160, cellComponent: DateOnlyCell }
 ]
 
 // 기본 표시 컬럼
 const defaultVisibleColumns = [
-  'ch_id', 'hq_code', 'route_code', 'cctv_id', 'trans_id', 'fms_id', 'ch_alive', 'ch_alive_time', 'reg_date'
+  'hq_code', 'route_code', 'cctv_id', 'trans_id', 'trans_name', 'fms_id', 'fms_name', 'ch_alive', 'ch_alive_time', 'reg_date'
 ]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
-// 배열을 스프레드하여 새 참조를 반환하여 Table 컴포넌트의 watch가 확실히 감지하도록 함
+// trans_name, fms_name은 영상변환서버/미디어서버 스토어에서 ID로 조회해 매핑
 const rawData = computed(() => {
   const items = videoConversionStore.items
   if (videoConversionStore.error) {
     console.error('영상변환 채널정보 스토어 에러:', videoConversionStore.error)
   }
-  // 새 배열을 반환하여 참조 변경을 보장
-  return [...items]
+  return items.map((row) => {
+    const trans = conversionServerStore.getById(row.trans_id)
+    const fms = mediaServerStore.getById(row.fms_id)
+    return {
+      ...row,
+      trans_name: trans?.trans_name ?? '',
+      fms_name: fms?.fms_name ?? ''
+    }
+  })
 })
 
+// 셀렉트 옵션: 카메라 목록, 영상변환서버 목록, 미디어 서버 목록
+const cameraOptions = computed(() =>
+  cameraStore.items.map((c) => ({
+    value: c.cctv_id,
+    label: c.camera_no ? `${c.cctv_id} (${c.camera_no})` : c.cctv_id
+  }))
+)
+const conversionServerOptions = computed(() =>
+  conversionServerStore.items.map((s) => ({
+    value: s.trans_id,
+    label: s.trans_name ? `${s.trans_id} (${s.trans_name})` : s.trans_id
+  }))
+)
+const mediaServerOptions = computed(() =>
+  mediaServerStore.items.map((s) => ({
+    value: s.fms_id,
+    label: s.fms_name ? `${s.fms_id} (${s.fms_name})` : s.fms_id
+  }))
+)
+
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
-const formFields: FormField[] = [
-  { id: 'ch_id', label: '채널 구분자', type: 'text', required: true, placeholder: '예: CH000XXXXX' },
-  { id: 'cctv_id', label: 'CCTV ID', type: 'text', required: true, placeholder: '예: CCTV000XXXXX' },
-  { id: 'trans_id', label: '영상 변환 서버 ID', type: 'text', required: true, placeholder: '예: TR0000XXXX' },
-  { id: 'fms_id', label: '미디어 서버 ID', type: 'text', required: true, placeholder: '예: FMS0000XXXX' },
+const formFields = computed<FormField[]>(() => [
+  { id: 'ch_id', label: '채널 ID', type: 'id', required: true, placeholder: '숫자 4자리', maxLength: 4 },
+  { id: 'cctv_id', label: 'CCTV 관리 번호', type: 'select', required: true, placeholder: '카메라 선택', options: cameraOptions.value },
+  { id: 'trans_id', label: '영상 변환 서버', type: 'select', required: true, placeholder: '영상 변환 서버 선택', options: conversionServerOptions.value },
+  { id: 'fms_id', label: '미디어 서버', type: 'select', required: true, placeholder: '미디어 서버 선택', options: mediaServerOptions.value },
   { id: 'ch_venc', label: '영상 인코딩 방식', type: 'text', required: true },
   { id: 'ch_vsize', label: '영상 크기', type: 'text' },
   { id: 'ch_vfps', label: '영상 FPS', type: 'text', placeholder: '2~30' },
@@ -243,7 +278,7 @@ const formFields: FormField[] = [
   { id: 'ch_jpg_size', label: 'JPG 크기', type: 'text', required: true },
   { id: 'ch_jpg_kbps', label: 'JPG BPS', type: 'text', placeholder: '00000~99999' },
   { id: 'ch_jpg_keep_count', label: 'JPG 파일 유지 개수', type: 'text', placeholder: '0~20' }
-]
+])
 
 // 일괄 변경용 폼 필드 (ID 제외, 필수 항목도 선택적으로 변경 가능)
 const batchFormFields: FormField[] = [
@@ -267,7 +302,13 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
     isSubmitting.value = true
     if (isNew) {
-      await videoConversionStore.createVideoConversion(data as VideoConversion)
+      const now = new Date()
+      const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+      // IdInput 4자리 → 채널 ID 형식 (CH + 8자리, 앞 0 패딩)
+      const chIdRaw = String(data.ch_id ?? '').replace(/\D/g, '').slice(0, 8)
+      const ch_id = chIdRaw.length <= 4 ? `CH${chIdRaw.padStart(8, '0')}` : `CH${chIdRaw}`
+      const payload = { ...data, ch_id, reg_date: nowStr }
+      await videoConversionStore.createVideoConversion(payload as VideoConversion)
     } else {
       await videoConversionStore.updateVideoConversion(data.ch_id, data)
     }
@@ -351,8 +392,13 @@ const handleBatchModalSubmit = async (data: Record<string, any>) => {
 // fetchVideoConversions 내부에서 CommonCode 로드 및 매핑을 모두 처리
 onMounted(async () => {
   try {
+    // 셀렉트 옵션용 목록 로드 (병렬)
+    await Promise.all([
+      cameraStore.fetchCameras(),
+      conversionServerStore.fetchVideoConversionServers(),
+      mediaServerStore.fetchMediaServers()
+    ])
     await videoConversionStore.fetchVideoConversions()
-    // nextTick으로 DOM 업데이트 대기
     await nextTick()
   } catch (error) {
     console.error('영상변환 채널정보 로드 실패:', error)

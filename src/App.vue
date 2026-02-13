@@ -24,13 +24,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from './stores/auth'
 import HomeView from './components/views/HomeView.vue'
 import Layout from './layout/Layout.vue'
 import AlertModal from './components/common/AlertModal.vue'
 
 const route = useRoute()
-const authStore = useAuthStore()
 
 // ============================================================
 // 🚧 임시 코드: 로그인 없이 모든 페이지 확인용 (개발 모드)

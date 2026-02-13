@@ -34,16 +34,14 @@ import { useCameraInfoStore, type Camera } from '../../../stores/cameraInfo'
 import { useCommonCodeStore, type CommonCode } from '../../../stores/commonCode'
 import { useAlertStore } from '../../../stores/alert'
 import { useVideoConversionServerInfoStore } from '../../../stores/videoConversionServerInfo'
-import { useVideoFileTransferServerStore } from '../../../stores/videoFileTransferServerInfo'
 import { useMediaServerInfoStore } from '../../../stores/mediaServerInfo'
-import { useVideoConversionInfoStore } from '../../../stores/videoConversionInfo'
+import { useVideoConversionInfoStore, type VideoConversion } from '../../../stores/videoConversionInfo'
 
 // Pinia 스토어 사용
 const cameraStore = useCameraInfoStore()
 const commonCodeStore = useCommonCodeStore()
 const alertStore = useAlertStore()
 const conversionServerStore = useVideoConversionServerInfoStore()
-const fileTransferServerStore = useVideoFileTransferServerStore()
 const mediaServerStore = useMediaServerInfoStore()
 const videoConversionInfoStore = useVideoConversionInfoStore()
 
@@ -76,20 +74,13 @@ const routeOptions = computed(() => {
   }))
 })
 
-// 변환 서버 / 파일 제공 서버 / 미디어 서버 옵션 (폼용, DB에 컬럼 없으면 저장 시 제외)
+// 변환 서버 / 미디어 서버 옵션 (폼용, DB에 컬럼 없으면 저장 시 제외)
 const conversionServerOptions = computed(() =>
   conversionServerStore.items.map((item) => ({
     value: item.trans_id,
     label: `${item.trans_id} (${item.trans_name || ''})`
   }))
 )
-const fileTransferServerOptions = computed(() =>
-  fileTransferServerStore.items.map((item) => ({
-    value: item.fts_id,
-    label: `${item.fts_id} (${item.fts_name || ''})`
-  }))
-)
-// DataFormModal이 placeholder로 빈 옵션을 자동 추가하므로, 실제 서버 목록만 전달 (빈 옵션 중복 방지)
 const mediaServerOptions = computed(() =>
   mediaServerStore.items.map((item) => ({
     value: item.fms_id,
@@ -231,7 +222,6 @@ const rawData = computed(() => {
       branch_name: getCodeName('2', c.hq_code || '', c.branch_code || '') || c.branch_code,
       route_name: getCodeNameByGbn('4', c.route_code || '') || c.route_code,
       trans_id: conv?.trans_id ?? '',
-      fts_id: (conv as any)?.fts_id ?? '',
       fms_id: conv?.fms_id ?? ''
     }
   })
@@ -284,14 +274,6 @@ const formFields = computed<FormField[]>(() => [
     options: conversionServerOptions.value
   },
   {
-    id: 'fts_id',
-    label: '파일 제공 서버',
-    type: 'select',
-    required: true,
-    placeholder: '파일 제공 서버 선택',
-    options: fileTransferServerOptions.value
-  },
-  {
     id: 'fms_id',
     label: '미디어 서버',
     type: 'select',
@@ -299,8 +281,6 @@ const formFields = computed<FormField[]>(() => [
     placeholder: '미디어 서버 선택',
     options: mediaServerOptions.value
   },
-  { id: 'milepost', label: '이정', type: 'text', required: true, placeholder: '120.00' },
-  { id: 'camera_area', label: '설치 지역', type: 'text', required: true, placeholder: '' },
   {
     id: 'stream_purpose',
     label: '스트림 용도 구분',
@@ -312,6 +292,8 @@ const formFields = computed<FormField[]>(() => [
       { value: 'VoD', label: 'VoD' }
     ]
   },
+  { id: 'milepost', label: '이정', type: 'text', required: true, placeholder: '120.00' },
+  { id: 'camera_area', label: '설치 지역', type: 'text', required: true, placeholder: '' },
   { id: 'trans_wms_port', label: 'WMS Port', type: 'number', placeholder: '숫자 최대 5자리', maxLength: 5, max: 99999 },
   { id: 'link_id_s', label: '링크 시작점', type: 'text', placeholder: '표준 노드 링크 시작' },
   { id: 'link_id_e', label: '링크 종료점', type: 'text', placeholder: '표준 노드 링크 종료' },
@@ -320,7 +302,7 @@ const formFields = computed<FormField[]>(() => [
   { id: 'lat', label: '위도 좌표', type: 'text', placeholder: '', pattern: '^-?\\d*\\.?\\d*$', patternMessage: '숫자만 입력 가능합니다.' }
 ])
 
-// Camera 인터페이스에 있는 키만 추출 (폼 전용 필드 public_url, stream_purpose, trans_id, fts_id, fms_id는 API에 미포함)
+// Camera 인터페이스에 있는 키만 추출 (폼 전용 필드 public_url, stream_purpose, trans_id, fms_id는 API에 미포함)
 const CAMERA_KEYS: (keyof Camera)[] = [
   'cctv_id', 'camera_no', 'hq_code', 'branch_code', 'route_code', 'location', 'camera_area',
   'enc_url', 'trans_wms_port', 'link_id_s', 'link_id_e', 'vlink_id_s', 'vlink_id_e', 'road_id',
@@ -366,6 +348,55 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       payload.last_cctv_time = payload.last_cctv_time ?? nowStr
       payload.ftp_sent_date = payload.ftp_sent_date ?? nowStr
       await cameraStore.createCamera(payload as Camera)
+
+      // 신규 카메라 등록 성공 후 MGMT_CHANNEL에 채널 등록 (ch_id = CCTV → CH)
+      const cctvId = payload.cctv_id as string
+      const chId = (cctvId || '').replace(/^CCTV/, 'CH')
+      const channelPayload = {
+        ch_id: chId,
+        cctv_id: cctvId,
+        trans_id: merged.trans_id ?? '',
+        fms_id: merged.fms_id ?? '',
+        ch_venc: '',
+        ch_vsize: '',
+        ch_vfps: '',
+        ch_vkpbs: '',
+        ch_alive: 'N',
+        ch_alive_time: null as string | null,
+        ch_alive_yn: '',
+        reg_date: nowStr,
+        json_job: 'N',
+        json_yn: 'N',
+        json_date: nowStr,
+        kt_cctv: '',
+        ch_wmv_yn: 'N',
+        ch_wmv_venc: '',
+        ch_wmv_vsize: '',
+        ch_wmv_vfps: '',
+        ch_wmv_vkpbs: '',
+        sms_session: '',
+        sms_host_ip: '',
+        sms_date: null as string | null,
+        job_status: '',
+        ch_jpg_size: '',
+        ch_jpg_kbps: '',
+        ch_jpg_keep_count: 0
+      }
+      try {
+        await videoConversionInfoStore.createVideoConversion(channelPayload as VideoConversion)
+      } catch (channelError: any) {
+        console.error('채널 정보 등록 실패:', channelError)
+        const channelDetail = channelError.response?.data?.detail || videoConversionInfoStore.error || ''
+        const channelDetailText = typeof channelDetail === 'string'
+          ? channelDetail
+          : Array.isArray(channelDetail)
+            ? channelDetail.map((d: any) => d?.msg ?? d).join(', ')
+            : (channelDetail?.message ?? '')
+        alertStore.show(
+          `채널 정보 등록에 실패했습니다. 영상 변환 정보 화면에서 수동으로 등록할 수 있습니다.${channelDetailText ? ` (${channelDetailText})` : ''}`,
+          'error'
+        )
+      }
     } else {
       await cameraStore.updateCamera(payload.cctv_id, payload)
     }
@@ -420,7 +451,6 @@ onMounted(() => {
   cameraStore.fetchCameras()
   commonCodeStore.fetchCommonCodes()
   conversionServerStore.fetchVideoConversionServers()
-  fileTransferServerStore.fetchTransferServers()
   mediaServerStore.fetchMediaServers()
   videoConversionInfoStore.fetchVideoConversions()
 })

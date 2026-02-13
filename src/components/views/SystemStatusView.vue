@@ -1,7 +1,7 @@
 <template>
-  <div class="system-status-container">
+  <div class="flex flex-col w-full p-0 h-[calc(100vh-70px-48px)] max-h-[calc(100vh-70px-48px)] overflow-hidden">
     <!-- Top: Camera Status Summary (Compacted) -->
-    <div class="camera-status-section">
+    <div class="bg-white rounded-2xl px-4 py-3 shadow-md border-2 border-slate-200 mb-3 w-full shrink-0">
       <div class="flex items-center gap-6">
         <h3 class="text-base font-bold text-slate-800 shrink-0 mr-4">전체 카메라 현황</h3>
 
@@ -29,57 +29,57 @@
     </div>
 
     <!-- Middle: Split Charts -->
-    <div class="charts-section">
+    <div class="grid grid-cols-3 gap-4 mb-3 w-full relative z-[1] shrink-0">
       <!-- Left: User Connections -->
-      <div class="chart-card">
-        <h3 class="chart-title">
+      <div class="system-status-chart-card">
+        <h3 class="system-status-chart-title">
           <Users :size="16" class="text-cyan-600" /> 실시간 접속자 추이
         </h3>
-        <div class="chart-content">
+        <div class="flex-1 min-h-0 overflow-hidden">
           <AreaChart :data="userData" color="#0891b2" label="접속자 수" />
         </div>
       </div>
 
       <!-- Right: Network Bandwidth -->
-      <div class="chart-card">
-        <h3 class="chart-title">
+      <div class="system-status-chart-card">
+        <h3 class="system-status-chart-title">
           <Wifi :size="16" class="text-indigo-500" /> 네트워크 대역폭
         </h3>
-        <div class="chart-content">
+        <div class="flex-1 min-h-0 overflow-hidden">
           <AreaChart :data="networkData" color="#6366f1" label="대역폭 (Mbps)" />
         </div>
       </div>
 
       <!-- Right: Recent Alert Logs -->
-      <div class="chart-card">
-        <h3 class="chart-title-small">
+      <div class="system-status-chart-card">
+        <h3 class="system-status-chart-title-small">
           <Bell :size="16" class="text-orange-500" /> 최근 알림 로그
         </h3>
-        <div class="log-content">
+        <div class="flex-1 min-h-0 flex flex-col gap-1.5 overflow-hidden">
           <div
             v-for="log in displayedLogs"
             :key="log.id"
-            class="log-item"
+            class="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0 hover:bg-slate-50 hover:px-1 hover:rounded transition-colors"
           >
-            <div class="log-item-content">
+            <div class="flex items-center gap-2 truncate flex-1 min-w-0">
               <span
                 :class="[
-                  'log-dot',
+                  'w-2 h-2 rounded-full shrink-0',
                   log.type === 'success' ? 'bg-green-500' :
                   log.type === 'warning' ? 'bg-orange-400' :
                   log.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
                 ]"
               ></span>
-              <span class="log-message">{{ log.message }}</span>
+              <span class="text-slate-700 truncate font-medium text-xs">{{ log.message }}</span>
             </div>
-            <span class="log-time">{{ log.time }}</span>
+            <span class="text-[10px] text-slate-400 font-mono shrink-0 ml-2">{{ log.time }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Bottom Split: Locations -->
-    <div class="locations-section">
+    <div class="grid grid-cols-2 gap-4 w-full flex-1 min-h-0 overflow-hidden relative z-[1]">
       <LocationPanelExtended
         title="김천 본사"
         :icon="LayoutDashboard"
@@ -161,497 +161,3 @@ const displayedLogs = computed(() => {
   return props.alertLogs.slice(0, 3)
 })
 </script>
-
-<style scoped>
-/* Tailwind CSS 유틸리티 클래스들 */
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.h-full {
-  height: 100%;
-}
-
-.bg-white {
-  background-color: #ffffff;
-}
-
-.rounded-2xl {
-  border-radius: 1rem;
-}
-
-.p-4 {
-  padding: 1rem;
-}
-
-.shadow-sm {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.shadow-md {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.border {
-  border-width: 1px;
-}
-
-.border-2 {
-  border-width: 2px;
-}
-
-.border-slate-100 {
-  border-color: #f1f5f9;
-}
-
-.border-slate-200 {
-  border-color: #e2e8f0;
-}
-
-.shrink-0 {
-  flex-shrink: 0;
-}
-
-.flex-shrink-0 {
-  flex-shrink: 0;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.gap-6 {
-  gap: 1.5rem;
-}
-
-.text-base {
-  font-size: 1rem;
-  line-height: 1.5rem;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.text-slate-800 {
-  color: #1e293b;
-}
-
-.mr-4 {
-  margin-right: 1rem;
-}
-
-.flex-1 {
-  flex: 1 1 0%;
-}
-
-.gap-4 {
-  gap: 1rem;
-}
-
-.bg-slate-50 {
-  background-color: #f8fafc;
-}
-
-.rounded-lg {
-  border-radius: 0.5rem;
-}
-
-.px-3 {
-  padding-left: 0.75rem;
-  padding-right: 0.75rem;
-}
-
-.py-2 {
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.border-slate-100 {
-  border-color: #f1f5f9;
-}
-
-.text-slate-500 {
-  color: #64748b;
-}
-
-.text-sm {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-}
-
-.font-medium {
-  font-weight: 500;
-}
-
-.gap-2 {
-  gap: 0.5rem;
-}
-
-.text-2xl {
-  font-size: 1.5rem;
-  line-height: 2rem;
-}
-
-.text-green-50 {
-  background-color: #f0fdf4;
-}
-
-.border-green-100 {
-  border-color: #dcfce7;
-}
-
-.text-green-700 {
-  color: #15803d;
-}
-
-.bg-red-50 {
-  background-color: #fef2f2;
-}
-
-.border-red-100 {
-  border-color: #fee2e2;
-}
-
-.text-red-700 {
-  color: #b91c1c;
-}
-
-.grid {
-  display: grid;
-}
-
-.grid-cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.h-48 {
-  height: 12rem;
-}
-
-.border-slate-200 {
-  border-color: #e2e8f0;
-}
-
-.mb-4 {
-  margin-bottom: 1rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;
-  line-height: 1.75rem;
-}
-
-.text-cyan-600 {
-  color: #0891b2;
-}
-
-.text-indigo-500 {
-  color: #6366f1;
-}
-
-.min-h-0 {
-  min-height: 0;
-}
-
-.justify-center {
-  justify-content: center;
-}
-
-.text-slate-400 {
-  color: #94a3b8;
-}
-
-.text-orange-500 {
-  color: #f97316;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.relative {
-  position: relative;
-}
-
-.absolute {
-  position: absolute;
-}
-
-.inset-0 {
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-}
-
-.overflow-y-auto {
-  overflow-y: auto;
-}
-
-.custom-scrollbar {
-  scrollbar-width: thin;
-}
-
-.pr-2 {
-  padding-right: 0.5rem;
-}
-
-.gap-3 {
-  gap: 0.75rem;
-}
-
-.py-1 {
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-}
-
-.border-b {
-  border-bottom-width: 1px;
-}
-
-.border-slate-50 {
-  border-color: #f8fafc;
-}
-
-.last\:border-0:last-child {
-  border-width: 0;
-}
-
-.hover\:bg-slate-50:hover {
-  background-color: #f8fafc;
-}
-
-.transition-colors {
-  transition-property: color, background-color, border-color;
-}
-
-.px-1 {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-}
-
-.rounded {
-  border-radius: 0.25rem;
-}
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.min-w-0 {
-  min-width: 0;
-}
-
-.w-2 {
-  width: 0.5rem;
-}
-
-.h-2 {
-  height: 0.5rem;
-}
-
-.rounded-full {
-  border-radius: 9999px;
-}
-
-.bg-green-500 {
-  background-color: #22c55e;
-}
-
-.bg-orange-400 {
-  background-color: #fb923c;
-}
-
-.bg-red-500 {
-  background-color: #ef4444;
-}
-
-.bg-blue-500 {
-  background-color: #3b82f6;
-}
-
-.text-slate-700 {
-  color: #334155;
-}
-
-.font-mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-}
-
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.system-status-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: 0;
-  height: calc(100vh - 70px - 48px); /* 1080px - header 70px - padding 48px */
-  max-height: calc(100vh - 70px - 48px);
-  overflow: hidden;
-}
-
-.camera-status-section {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border-width: 2px;
-  border-color: #e2e8f0;
-  margin-bottom: 0.75rem;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.charts-section {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-  width: 100%;
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
-}
-
-.chart-card {
-  background-color: #ffffff;
-  border-radius: 1rem;
-  padding: 0.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border-width: 2px;
-  border-color: #e2e8f0;
-  display: flex;
-  flex-direction: column;
-  height: 8.5rem;
-}
-
-.chart-title {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.chart-title-small {
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 0.375rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.chart-content {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.log-content {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-  overflow: hidden;
-}
-
-.log-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-  border-bottom: 1px solid #f8fafc;
-}
-
-.log-item:last-child {
-  border-bottom: none;
-}
-
-.log-item:hover {
-  background-color: #f8fafc;
-  transition: background-color 0.15s;
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
-  border-radius: 0.25rem;
-}
-
-.log-item-content {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-  min-width: 0;
-}
-
-.log-dot {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.log-message {
-  color: #334155;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-  font-size: 0.75rem;
-}
-
-.log-time {
-  font-size: 0.625rem;
-  color: #94a3b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  flex-shrink: 0;
-  margin-left: 0.5rem;
-}
-
-.locations-section {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  width: 100%;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-  position: relative;
-  z-index: 1;
-}
-</style>
-

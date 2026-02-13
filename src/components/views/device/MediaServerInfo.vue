@@ -58,39 +58,6 @@ const TextCell = defineComponent({
   }
 })
 
-const StatusCell = defineComponent({
-  props: {
-    value: {
-      type: [String, Number, Boolean],
-      default: ''
-    }
-  },
-  setup(props) {
-    // Boolean 값 처리: true -> 'Y', false -> 'N'
-    const statusValue = typeof props.value === 'boolean' 
-      ? (props.value ? 'Y' : 'N')
-      : String(props.value || '')
-    
-    const statusClass = statusValue === 'Y' || statusValue === 'active' ? 'bg-green-50 text-green-700' :
-                       statusValue === 'warning' ? 'bg-orange-50 text-orange-700' :
-                       'bg-slate-100 text-slate-600'
-    const dotClass = statusValue === 'Y' || statusValue === 'active' ? 'bg-green-500' :
-                     statusValue === 'warning' ? 'bg-orange-500' :
-                     'bg-slate-400'
-    
-    const displayText = statusValue === 'Y' ? '정상' : 
-                       statusValue === 'N' ? '비활성' :
-                       statusValue.toUpperCase()
-    
-    return () => h('span', {
-      class: ['inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium', statusClass]
-    }, [
-      h('span', { class: ['w-1.5 h-1.5 rounded-full', dotClass] }),
-      displayText
-    ])
-  }
-})
-
 // MediaServer 인터페이스는 stores/mediaServerInfo.ts에서 import하므로 여기서는 제거
 
 // 기본 컬럼 너비 설정
@@ -113,60 +80,19 @@ const ServerTypeCell = defineComponent({
   }
 })
 
-const YesNoCell = defineComponent({
-  props: {
-    value: {
-      type: [String, Number, Boolean],
-      default: ''
-    }
-  },
-  setup(props) {
-    const isYes = props.value === 'Y' || props.value === true || props.value === 'true'
-    return () => h('span', {
-      class: [
-        'inline-block px-2 py-0.5 rounded text-xs font-bold',
-        isYes ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
-      ]
-    }, isYes ? 'Y' : 'N')
-  }
-})
-
-function toDateOnly(value: unknown): string {
-  if (value == null || value === '') return ''
-  const s = String(value).trim()
-  return s.length >= 10 ? s.slice(0, 10) : s
-}
-
-const DateOnlyCell = defineComponent({
-  props: {
-    value: {
-      type: [String, Number],
-      default: ''
-    }
-  },
-  setup(props) {
-    return () => h('span', { class: 'text-sm text-slate-700' }, toDateOnly(props.value))
-  }
-})
-
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
-  { id: 'fms_id', header: '미디어 서버 구분자', size: 140, cellComponent: TextCell },
+  { id: 'fms_id', header: '미디어 서버 ID', size: 140, cellComponent: TextCell },
   { id: 'fms_name', header: '미디어 서버 이름', size: 150, cellComponent: TextCell },
   { id: 'fms_ip', header: '미디어 서버 IP', size: 130, cellComponent: TextCell },
-  { id: 'fms_ext_ip', header: '외부 주소', size: 130, cellComponent: TextCell },
   { id: 'fms_port', header: '포트 번호', size: 100, cellComponent: TextCell },
   { id: 'fms_con_id', header: '사용자 ID', size: 120, cellComponent: TextCell },
-  { id: 'svr_type', header: '서버 종류', size: 120, cellComponent: ServerTypeCell },
-  { id: 'alive', header: '동작 여부', size: 100, cellComponent: StatusCell },
-  { id: 'alive_time', header: '최종 확인 시간', size: 180, cellComponent: DateOnlyCell },
-  { id: 'json_job', header: 'JSON 가능', size: 120, cellComponent: TextCell },
-  { id: 'json_yn', header: 'JSON 사용', size: 100, cellComponent: YesNoCell }
+  { id: 'svr_type', header: '서버 종류', size: 120, cellComponent: ServerTypeCell }
 ]
 
 // 기본 표시 컬럼
 const defaultVisibleColumns = [
-  'fms_id', 'fms_name', 'fms_ip', 'fms_port', 'svr_type', 'alive', 'alive_time'
+  'fms_id', 'fms_name', 'fms_ip', 'fms_port', 'svr_type'
 ]
 
 // 스토어의 데이터를 직접 참조 (computed 사용)
@@ -178,21 +104,26 @@ const rawData = computed(() => {
   return mediaServerStore.items
 })
 
+// 서버 종류 옵션: 공통코드 grp_gbn='C', grp_code='11'
+const serverTypeOptions = computed(() =>
+  commonCodeStore.getByGrpGbn('C')
+    .filter((item: { grp_code: string }) => String(item.grp_code) === '11')
+    .map((item: { code: string; code_name: string }) => ({
+      value: item.code || '',
+      label: (item.code_name || '').trim() || item.code || ''
+    }))
+)
+
 // 폼 필드 정의 (백엔드 스키마에 맞춤)
-const formFields: FormField[] = [
-  { id: 'fms_id', label: '미디어 서버 구분자', type: 'text', required: true, placeholder: '예: FMS0000XXXX' },
+const formFields = computed<FormField[]>(() => [
+  { id: 'fms_id', label: '미디어 서버 ID', type: 'id', required: true, placeholder: '숫자 4자리', maxLength: 4 },
   { id: 'fms_name', label: '미디어 서버 이름', type: 'text', required: true, placeholder: '한글/영문' },
-  { id: 'fms_ip', label: '미디어 서버 IP 주소', type: 'text', required: true, placeholder: '예: 172.16.33.180' },
-  { id: 'fms_ext_ip', label: '외부 주소', type: 'text', placeholder: '예: 192.168.1.151' },
-  { id: 'fms_port', label: '서버 포트 번호', type: 'number', placeholder: '0~65535' },
-  { id: 'fms_con_id', label: '사용자 ID', type: 'text' },
-  { id: 'fms_passwd', label: '사용자 암호', type: 'text' }, // 암호화 필드이나 UI에서는 텍스트로 처리
-  { id: 'svr_type', label: '미디어 서버 종류', type: 'text', required: true },
-  { id: 'alive', label: '동작 여부', type: 'text', placeholder: 'Y / N' },
-  { id: 'alive_time', label: '최종 확인 시간', type: 'text', placeholder: 'YYYY/MM/DD HH:mm:SS' },
-  { id: 'json_job', label: 'JSON 프로토콜 가능 여부', type: 'text' },
-  { id: 'json_yn', label: 'JSON 프로토콜 사용 여부', type: 'text', placeholder: 'Y / N' }
-]
+  { id: 'fms_ip', label: 'IP 주소', type: 'ip', required: true, placeholder: '' },
+  { id: 'fms_port', label: '포트', type: 'number', required: true, placeholder: '0~65535', min: 0, max: 65535 },
+  { id: 'fms_con_id', label: '접속 ID', type: 'text', placeholder: '접속 ID' },
+  { id: 'fms_passwd', label: '접속 PW', type: 'password', placeholder: '접속 암호' },
+  { id: 'svr_type', label: '서버 종류', type: 'select', required: true, placeholder: '서버 종류 선택', options: serverTypeOptions.value }
+])
 
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
@@ -203,7 +134,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
     isSubmitting.value = true
     if (isNew) {
-      await mediaServerStore.createMediaServer(data as MediaServer)
+      // IdInput 4자리 → 미디어 서버 ID 형식 (FMS + 8자리, 앞 0 패딩)
+      const idRaw = String(data.fms_id ?? '').replace(/\D/g, '').slice(0, 8)
+      const fms_id = idRaw.length <= 4 ? `FMS${idRaw.padStart(8, '0')}` : `FMS${idRaw}`
+      const payload = { ...data, fms_id }
+      await mediaServerStore.createMediaServer(payload as MediaServer)
     } else {
       await mediaServerStore.updateMediaServer(data.fms_id, data)
     }
@@ -239,6 +174,7 @@ const handleDataDelete = async (ids: string[]) => {
 // 컴포넌트 마운트 시 데이터 로드
 onMounted(async () => {
   try {
+    await commonCodeStore.fetchCommonCodes()
     await mediaServerStore.fetchMediaServers()
     console.log('미디어 서버 정보 로드 완료:', mediaServerStore.items.length, '개')
     if (mediaServerStore.error) {

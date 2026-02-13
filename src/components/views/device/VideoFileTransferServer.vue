@@ -101,18 +101,27 @@ const defaultVisibleColumns = ['fts_id', 'fts_name', 'fts_type', 'ip_addr', 'fts
 // 스토어의 데이터를 직접 참조 (computed 사용)
 const rawData = computed(() => transferServerStore.items)
 
-// 폼 필드 정의 (실제 DB 스키마에 맞춤)
-const formFields: FormField[] = [
-  { id: 'fts_id', label: '서버 ID', type: 'text', required: true, placeholder: 'FTSXX (00~99)' },
+// 서버 종류 옵션: 공통코드 grp_gbn='C', grp_code='11' (미디어 서버 정보와 동일)
+const serverTypeOptions = computed(() =>
+  commonCodeStore.getByGrpGbn('C')
+    .filter((item: { grp_code: string }) => String(item.grp_code) === '11')
+    .map((item: { code: string; code_name: string }) => ({
+      value: item.code || '',
+      label: (item.code_name || '').trim() || item.code || ''
+    }))
+)
+
+// 폼 필드 정의 (미디어 서버 정보 신규 모달과 동일 형식: IdInput, IpInput, 셀렉트 등)
+const formFields = computed<FormField[]>(() => [
+  { id: 'fts_id', label: '영상 파일 전송 서버 ID', type: 'id', required: true, placeholder: '숫자 2자리', maxLength: 2 },
   { id: 'fts_name', label: '서버 이름', type: 'text', required: true, placeholder: '한글/영문' },
-  { id: 'fts_type', label: '서버 종류', type: 'text', required: true, placeholder: 'XXXXX (코드형식)' },
-  { id: 'ip_addr', label: '서버 IP 주소', type: 'text', required: true, placeholder: 'A.B.C.D' },
-  { id: 'fts_target_ip', label: '전송 대상 서버 IP', type: 'text', required: true, placeholder: 'A.B.C.D' },
+  { id: 'ip_addr', label: 'IP 주소', type: 'ip', required: true, placeholder: '' },
+  { id: 'fts_target_ip', label: '대상 서버 IP', type: 'ip', required: true, placeholder: '' },
   { id: 'fts_target_root_dir', label: '대상 서버 루트 경로', type: 'text', placeholder: '경로 문자열' },
-  { id: 'user_id', label: '사용자 ID', type: 'text', required: true, placeholder: '사용자 계정' },
-  { id: 'password', label: '사용자 암호', type: 'text', required: true, placeholder: '암호화된 문자열' },
-  { id: 'reg_date', label: '등록 일자', type: 'text', placeholder: 'YYYY-MM-DD' }
-]
+  { id: 'user_id', label: '접속 ID', type: 'text', required: true, placeholder: '접속 ID' },
+  { id: 'password', label: '접속 PW', type: 'password', required: true, placeholder: '접속 암호' },
+  { id: 'fts_type', label: '서버 종류', type: 'select', required: true, placeholder: '서버 종류 선택', options: serverTypeOptions.value }
+])
 
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
@@ -123,7 +132,11 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   try {
     isSubmitting.value = true
     if (isNew) {
-      await transferServerStore.createTransferServer(data as VideoFileTransferServer)
+      // IdInput 2자리 → 영상 파일 전송 서버 ID 형식 (FTSXX, 앞 0 패딩)
+      const idRaw = String(data.fts_id ?? '').replace(/\D/g, '').slice(0, 2)
+      const fts_id = `FTS${idRaw.padStart(2, '0')}`
+      const payload = { ...data, fts_id }
+      await transferServerStore.createTransferServer(payload as VideoFileTransferServer)
     } else {
       await transferServerStore.updateTransferServer(data.fts_id, data)
     }
@@ -156,9 +169,10 @@ const handleDataDelete = async (ids: string[]) => {
   }
 }
 
-// 컴포넌트 마운트 시 데이터 로드
+// 컴포넌트 마운트 시 데이터 로드 (공통코드 → 서버 종류 셀렉트 옵션용)
 onMounted(async () => {
   try {
+    await commonCodeStore.fetchCommonCodes()
     await transferServerStore.fetchTransferServers()
   } catch (error) {
     console.error('영상 파일 전송 서버 정보 로드 실패:', error)

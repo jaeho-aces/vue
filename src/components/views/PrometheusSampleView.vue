@@ -1,46 +1,66 @@
 <template>
-  <div class="prometheus-sample-view">
-    <div class="header">
-      <h1 class="title">프로메테우스 모니터링 대시보드</h1>
-      <div class="status-bar">
-        <div :class="['status-indicator', { connected: isConnected, disconnected: !isConnected }]">
-          <span class="status-dot"></span>
-          <span class="status-text">{{ isConnected ? '연결됨' : '연결 끊김' }}</span>
+  <div class="flex flex-col h-full overflow-hidden">
+    <div class="flex justify-between items-center py-5 border-b border-gray-200 mb-5">
+      <h1 class="text-2xl font-semibold text-gray-900 m-0">프로메테우스 모니터링 대시보드</h1>
+      <div class="flex items-center gap-3">
+        <div
+          :class="[
+            'flex items-center gap-2 px-3 py-2 rounded-md text-sm',
+            isConnected ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+          ]"
+        >
+          <span class="prometheus-status-dot"></span>
+          <span>{{ isConnected ? '연결됨' : '연결 끊김' }}</span>
         </div>
-        <button 
-          v-if="!isConnected" 
-          @click="connect" 
-          class="connect-button"
+        <button
+          v-if="!isConnected"
+          @click="connect"
+          class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition bg-blue-500 text-white hover:bg-blue-600"
         >
           재연결
         </button>
-        <button 
-          v-if="isConnected" 
-          @click="disconnect" 
-          class="disconnect-button"
+        <button
+          v-if="isConnected"
+          @click="disconnect"
+          class="px-4 py-2 rounded-md text-sm font-medium cursor-pointer transition bg-red-500 text-white hover:bg-red-600"
         >
           연결 끊기
         </button>
       </div>
     </div>
 
-    <div class="content">
+    <div class="flex-1 flex flex-col overflow-hidden gap-5">
       <!-- 탭 메뉴 -->
-      <div class="tabs">
-        <button 
-          :class="['tab-button', { active: viewMode === 'chart' }]"
+      <div class="flex gap-2 border-b border-gray-200">
+        <button
+          :class="[
+            'py-3 px-6 border-none bg-transparent text-sm font-medium cursor-pointer border-b-2 -mb-px transition',
+            viewMode === 'chart'
+              ? 'text-gray-900 border-blue-500 font-semibold'
+              : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-100'
+          ]"
           @click="viewMode = 'chart'"
         >
           차트
         </button>
-        <button 
-          :class="['tab-button', { active: viewMode === 'structured' }]"
+        <button
+          :class="[
+            'py-3 px-6 border-none bg-transparent text-sm font-medium cursor-pointer border-b-2 -mb-px transition',
+            viewMode === 'structured'
+              ? 'text-gray-900 border-blue-500 font-semibold'
+              : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-100'
+          ]"
           @click="viewMode = 'structured'"
         >
           구조화
         </button>
-        <button 
-          :class="['tab-button', { active: viewMode === 'json' }]"
+        <button
+          :class="[
+            'py-3 px-6 border-none bg-transparent text-sm font-medium cursor-pointer border-b-2 -mb-px transition',
+            viewMode === 'json'
+              ? 'text-gray-900 border-blue-500 font-semibold'
+              : 'text-gray-500 border-transparent hover:text-gray-900 hover:bg-gray-100'
+          ]"
           @click="viewMode = 'json'"
         >
           JSON
@@ -48,36 +68,34 @@
       </div>
 
       <!-- 차트 뷰 -->
-      <div v-if="viewMode === 'chart'" class="charts-grid">
-        <!-- CPU Idle 시간 차트 -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>CPU Idle 시간</h3>
-            <div class="chart-value">
-              <span class="value-number">{{ currentValues.cpu.toFixed(2) }}초</span>
+      <div v-if="viewMode === 'chart'" class="grid grid-cols-2 gap-5 flex-1 min-h-0">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 flex flex-col min-h-0">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-base font-semibold text-gray-900 m-0">CPU Idle 시간</h3>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold text-gray-900 font-mono">{{ currentValues.cpu.toFixed(2) }}초</span>
             </div>
           </div>
-          <div class="chart-container">
-            <AreaChart 
-              :data="chartData.cpu" 
-              color="#3b82f6" 
+          <div class="flex-1 min-h-[200px] relative">
+            <AreaChart
+              :data="chartData.cpu"
+              color="#3b82f6"
               label="CPU Idle 시간 (초)"
             />
           </div>
         </div>
 
-        <!-- Memory 사용률 차트 -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Memory 사용률</h3>
-            <div class="chart-value">
-              <span class="value-number">{{ Math.max(0, Math.min(100, currentValues.memory)).toFixed(1) }}%</span>
+        <div class="bg-white border border-gray-200 rounded-lg p-5 flex flex-col min-h-0">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-base font-semibold text-gray-900 m-0">Memory 사용률</h3>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold text-gray-900 font-mono">{{ Math.max(0, Math.min(100, currentValues.memory)).toFixed(1) }}%</span>
             </div>
           </div>
-          <div class="chart-container">
-            <AreaChart 
-              :data="chartData.memory" 
-              color="#10b981" 
+          <div class="flex-1 min-h-[200px] relative">
+            <AreaChart
+              :data="chartData.memory"
+              color="#10b981"
               label="Memory 사용률 (%)"
               :min="0"
               :max="100"
@@ -85,35 +103,33 @@
           </div>
         </div>
 
-        <!-- Network 수신 차트 -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Network 수신</h3>
-            <div class="chart-value">
-              <span class="value-number">{{ formatNetworkValue(currentValues.networkReceive) }}</span>
+        <div class="bg-white border border-gray-200 rounded-lg p-5 flex flex-col min-h-0">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-base font-semibold text-gray-900 m-0">Network 수신</h3>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold text-gray-900 font-mono">{{ formatNetworkValue(currentValues.networkReceive) }}</span>
             </div>
           </div>
-          <div class="chart-container">
-            <AreaChart 
-              :data="chartData.networkReceive" 
-              color="#f59e0b" 
+          <div class="flex-1 min-h-[200px] relative">
+            <AreaChart
+              :data="chartData.networkReceive"
+              color="#f59e0b"
               label="수신 속도 (bytes/s)"
             />
           </div>
         </div>
 
-        <!-- Network 송신 차트 -->
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>Network 송신</h3>
-            <div class="chart-value">
-              <span class="value-number">{{ formatNetworkValue(currentValues.networkTransmit) }}</span>
+        <div class="bg-white border border-gray-200 rounded-lg p-5 flex flex-col min-h-0">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-base font-semibold text-gray-900 m-0">Network 송신</h3>
+            <div class="flex items-baseline gap-1">
+              <span class="text-xl font-bold text-gray-900 font-mono">{{ formatNetworkValue(currentValues.networkTransmit) }}</span>
             </div>
           </div>
-          <div class="chart-container">
-            <AreaChart 
-              :data="chartData.networkTransmit" 
-              color="#ef4444" 
+          <div class="flex-1 min-h-[200px] relative">
+            <AreaChart
+              :data="chartData.networkTransmit"
+              color="#ef4444"
               label="송신 속도 (bytes/s)"
             />
           </div>
@@ -121,87 +137,91 @@
       </div>
 
       <!-- 구조화 뷰 -->
-      <div v-if="viewMode === 'structured'" class="structured-view">
-        <div class="metrics-grid">
-          <div 
-            v-for="(queryResult, queryName) in latestQueries" 
+      <div v-if="viewMode === 'structured'" class="flex-1 overflow-hidden flex flex-col">
+        <div
+          class="flex-1 overflow-y-auto p-5 grid gap-5 prometheus-metrics-grid"
+          style="grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));"
+        >
+          <div
+            v-for="(queryResult, queryName) in latestQueries"
             :key="queryName"
-            class="metric-card"
-            :class="{ 'metric-error': queryResult.status === 'error' }"
+            class="bg-white border rounded-lg p-5 transition hover:shadow-md"
+            :class="queryResult.status === 'error' ? 'border-red-500 bg-red-50' : 'border-gray-200'"
           >
-            <div class="metric-header">
-              <h3 class="metric-name">{{ getMetricDisplayName(String(queryName)) }}</h3>
-              <span 
-                :class="['metric-status', queryResult.status === 'success' ? 'status-success' : 'status-error']"
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-base font-semibold text-gray-900 m-0">{{ getMetricDisplayName(String(queryName)) }}</h3>
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium',
+                  queryResult.status === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                ]"
               >
                 {{ queryResult.status === 'success' ? '정상' : '오류' }}
               </span>
             </div>
-            <div class="metric-description">
+            <div class="text-[13px] text-gray-500 mb-4 leading-relaxed">
               {{ getMetricDescription(String(queryName)) }}
             </div>
-            
-            <!-- 성공한 쿼리 결과 -->
-            <div v-if="queryResult.status === 'success' && queryResult.data" class="metric-results">
+
+            <div v-if="queryResult.status === 'success' && queryResult.data" class="mt-3">
               <div v-if="queryResult.data.result && queryResult.data.result.length > 0">
-                <div 
-                  v-for="(result, index) in queryResult.data.result" 
+                <div
+                  v-for="(result, index) in queryResult.data.result"
                   :key="index"
-                  class="result-item"
+                  class="p-3 bg-gray-50 rounded-md mb-3 last:mb-0"
                 >
-                  <div class="result-labels" v-if="result.metric && Object.keys(result.metric).length > 0">
-                    <div 
-                      v-for="(value, key) in result.metric" 
+                  <div v-if="result.metric && Object.keys(result.metric).length > 0" class="mb-2 pb-2 border-b border-gray-200">
+                    <div
+                      v-for="(value, key) in result.metric"
                       :key="key"
-                      class="label-item"
+                      class="flex gap-2 mb-1 text-xs"
                     >
-                      <span class="label-key">{{ key }}:</span>
-                      <span class="label-value">{{ value }}</span>
+                      <span class="font-semibold text-gray-500 min-w-[100px]">{{ key }}:</span>
+                      <span class="text-gray-900 font-mono">{{ value }}</span>
                     </div>
                   </div>
-                  <div class="result-value">
-                    <span class="value-label">값:</span>
-                    <span class="value-number">{{ formatValue(result.value?.[1]) }}</span>
-                    <span class="value-unit">{{ getValueUnit(String(queryName), result.value?.[1]) }}</span>
+                  <div class="flex items-baseline gap-2 mb-2">
+                    <span class="text-[13px] font-semibold text-gray-500">값:</span>
+                    <span class="text-lg font-bold text-gray-900 font-mono">{{ formatValue(result.value?.[1]) }}</span>
+                    <span class="text-xs text-gray-500">{{ getValueUnit(String(queryName), result.value?.[1]) }}</span>
                   </div>
-                  <div class="result-timestamp" v-if="result.value?.[0]">
+                  <div v-if="result.value?.[0]" class="text-[11px] text-gray-500 mt-1">
                     타임스탬프: {{ formatTimestamp(result.value[0]) }}
                   </div>
                 </div>
               </div>
-              <div v-else class="no-data">
+              <div v-else class="p-3 bg-amber-100 rounded-md text-amber-800 text-[13px] text-center">
                 데이터 없음 (메트릭이 수집되지 않음)
               </div>
             </div>
-            
-            <!-- 에러 쿼리 결과 -->
-            <div v-else-if="queryResult.status === 'error'" class="metric-error-info">
-              <div class="error-message">
+
+            <div v-else-if="queryResult.status === 'error'" class="p-3 bg-red-100 rounded-md">
+              <div class="text-red-800 text-[13px] mb-2">
                 <strong>오류:</strong> {{ queryResult.error || '알 수 없는 오류' }}
               </div>
-              <div class="error-type" v-if="queryResult.errorType">
+              <div v-if="queryResult.errorType" class="text-[11px] text-red-700 italic">
                 오류 타입: {{ queryResult.errorType }}
               </div>
             </div>
           </div>
-          
-          <div v-if="Object.keys(latestQueries).length === 0" class="empty-state">
+
+          <div v-if="Object.keys(latestQueries).length === 0" class="flex items-center justify-center h-full text-gray-500 text-sm">
             데이터가 없습니다. SSE 연결을 확인하세요.
           </div>
         </div>
       </div>
 
       <!-- JSON 뷰 -->
-      <div v-if="viewMode === 'json'" class="json-view">
-        <div class="json-header">
-          <h3>원본 JSON 데이터</h3>
-          <span class="update-time" v-if="latestData">
+      <div v-if="viewMode === 'json'" class="flex-1 flex flex-col overflow-hidden bg-gray-50 rounded-lg p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-base font-semibold text-gray-900 m-0">원본 JSON 데이터</h3>
+          <span v-if="latestData" class="text-sm text-gray-500">
             마지막 업데이트: {{ formatTimestamp(latestData.timestamp) }}
           </span>
         </div>
-        <div class="json-content">
-          <pre>{{ JSON.stringify(latestData, null, 2) }}</pre>
-          <div v-if="!latestData" class="empty-state">
+        <div class="flex-1 overflow-y-auto bg-white rounded p-4 prometheus-json-content">
+          <pre class="m-0 text-xs font-mono text-gray-900 whitespace-pre-wrap break-words">{{ JSON.stringify(latestData, null, 2) }}</pre>
+          <div v-if="!latestData" class="flex items-center justify-center h-full text-gray-500 text-sm">
             데이터가 없습니다. SSE 연결을 확인하세요.
           </div>
         </div>
@@ -572,436 +592,4 @@ onUnmounted(() => {
 })
 </script>
 
-<style scoped>
-.prometheus-sample-view {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  margin-bottom: 20px;
-}
-
-.title {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  margin: 0;
-}
-
-.status-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.status-indicator.connected {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.status-indicator.disconnected {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: currentColor;
-  animation: pulse 2s infinite;
-}
-
-.status-indicator.connected .status-dot {
-  background-color: #10b981;
-}
-
-.status-indicator.disconnected .status-dot {
-  background-color: #ef4444;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.connect-button,
-.disconnect-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.connect-button {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.connect-button:hover {
-  background-color: #2563eb;
-}
-
-.disconnect-button {
-  background-color: #ef4444;
-  color: white;
-}
-
-.disconnect-button:hover {
-  background-color: #dc2626;
-}
-
-.content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  gap: 20px;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  padding-bottom: 0;
-}
-
-.tab-button {
-  padding: 12px 24px;
-  border: none;
-  background: none;
-  color: var(--text-secondary, #6b7280);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: all 0.2s;
-}
-
-.tab-button:hover {
-  color: var(--text-primary, #111827);
-  background-color: var(--bg-tertiary, #f3f4f6);
-}
-
-.tab-button.active {
-  color: var(--text-primary, #111827);
-  border-bottom-color: #3b82f6;
-  font-weight: 600;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
-  flex: 1;
-  min-height: 0;
-}
-
-.chart-card {
-  background-color: var(--bg-primary, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.chart-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  margin: 0;
-}
-
-.chart-value {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.value-number {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary, #111827);
-  font-family: 'Courier New', monospace;
-}
-
-.chart-container {
-  flex: 1;
-  min-height: 200px;
-  position: relative;
-}
-
-.structured-view {
-  flex: 1;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.metrics-grid {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 20px;
-}
-
-.metric-card {
-  background-color: var(--bg-primary, #ffffff);
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  padding: 20px;
-  transition: all 0.2s;
-}
-
-.metric-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.metric-card.metric-error {
-  border-color: #ef4444;
-  background-color: #fef2f2;
-}
-
-.metric-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.metric-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  margin: 0;
-}
-
-.metric-status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-success {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.status-error {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.metric-description {
-  font-size: 13px;
-  color: var(--text-secondary, #6b7280);
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-
-.metric-results {
-  margin-top: 12px;
-}
-
-.result-item {
-  padding: 12px;
-  background-color: var(--bg-secondary, #f9fafb);
-  border-radius: 6px;
-  margin-bottom: 12px;
-}
-
-.result-item:last-child {
-  margin-bottom: 0;
-}
-
-.result-labels {
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-}
-
-.label-item {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-
-.label-key {
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
-  min-width: 100px;
-}
-
-.label-value {
-  color: var(--text-primary, #111827);
-  font-family: 'Courier New', monospace;
-}
-
-.result-value {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.value-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary, #6b7280);
-}
-
-.value-number {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary, #111827);
-  font-family: 'Courier New', monospace;
-}
-
-.value-unit {
-  font-size: 12px;
-  color: var(--text-secondary, #6b7280);
-}
-
-.result-timestamp {
-  font-size: 11px;
-  color: var(--text-secondary, #6b7280);
-  margin-top: 4px;
-}
-
-.no-data {
-  padding: 12px;
-  background-color: #fef3c7;
-  border-radius: 6px;
-  color: #92400e;
-  font-size: 13px;
-  text-align: center;
-}
-
-.metric-error-info {
-  padding: 12px;
-  background-color: #fee2e2;
-  border-radius: 6px;
-}
-
-.error-message {
-  color: #991b1b;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.error-type {
-  font-size: 11px;
-  color: #b91c1c;
-  font-style: italic;
-}
-
-.json-view {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background-color: var(--bg-secondary, #f9fafb);
-  border-radius: 8px;
-  padding: 20px;
-}
-
-.json-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.json-header h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  margin: 0;
-}
-
-.json-content {
-  flex: 1;
-  overflow-y: auto;
-  background-color: var(--bg-primary, #ffffff);
-  border-radius: 4px;
-  padding: 16px;
-}
-
-.json-content pre {
-  margin: 0;
-  font-size: 12px;
-  font-family: 'Courier New', monospace;
-  color: var(--text-primary, #111827);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.empty-state {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-secondary, #6b7280);
-  font-size: 14px;
-}
-
-/* 스크롤바 스타일링 */
-.metrics-grid::-webkit-scrollbar,
-.json-content::-webkit-scrollbar {
-  width: 8px;
-}
-
-.metrics-grid::-webkit-scrollbar-track,
-.json-content::-webkit-scrollbar-track {
-  background: var(--bg-secondary, #f9fafb);
-}
-
-.metrics-grid::-webkit-scrollbar-thumb,
-.json-content::-webkit-scrollbar-thumb {
-  background: var(--border-color, #e5e7eb);
-  border-radius: 4px;
-}
-
-.metrics-grid::-webkit-scrollbar-thumb:hover,
-.json-content::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary, #6b7280);
-}
-</style>

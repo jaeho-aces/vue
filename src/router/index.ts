@@ -1,7 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { api } from '../services/api'
 
 const routes: Array<RouteRecordRaw> = [
   {
