@@ -8,8 +8,10 @@
       :fields="formFields"
       :initial-data="editingData || undefined"
       :size="modalSize || 'default'"
+      :reset-trigger="addAnotherResetTrigger"
       @close="handleModalClose"
       @submit="handleModalSubmit"
+      @submit-and-add-another="handleModalSubmitAndAddAnother"
     />
 
     <!-- 삭제 확인 모달 -->
@@ -88,7 +90,7 @@
         <div class="table-button-group">
           <!-- 커스텀 버튼 슬롯 (기본 버튼 왼쪽) -->
           <slot name="toolbar-actions-left"></slot>
-          <Button @click="handleNew" variant="primary">
+          <Button v-if="!props.hideNewButton" @click="handleNew" variant="primary">
             신규
           </Button>
           <Button 
@@ -374,6 +376,7 @@ interface Props {
   idColumnWidth?: number
   idField?: string
   hideEditButton?: boolean // 수정 버튼 숨김 옵션
+  hideNewButton?: boolean // 신규 버튼 숨김 (커스텀 신규 모달 사용 시)
   preferenceKey?: string // 컬럼 설정 저장 키
   hideIdColumn?: boolean // ID 컬럼 숨김 여부
 }
@@ -384,6 +387,7 @@ const props = withDefaults(defineProps<Props>(), {
   idField: 'id',
   defaultVisibleColumns: () => [],
   hideEditButton: false,
+  hideNewButton: false,
   preferenceKey: '',
   hideIdColumn: false,
   modalSize: 'default'
@@ -504,6 +508,8 @@ const handleResizeEnd = () => {
 // 모달 상태
 const isModalOpen = ref(false)
 const editingData = ref<any | null>(null)
+const addAnotherPending = ref(false)
+const addAnotherResetTrigger = ref(0)
 
 // 삭제 확인 모달 상태
 const isDeleteConfirmOpen = ref(false)
@@ -571,15 +577,32 @@ const handleDelete = () => {
 const handleModalClose = () => {
   isModalOpen.value = false
   editingData.value = null
+  addAnotherPending.value = false
+}
+
+/** 신규 등록 시 ID 필드 값이 문자열이면 소문자로 정규화 */
+function normalizeIdFieldForNew(data: Record<string, any>, isNew: boolean) {
+  if (!isNew || !props.idField) return
+  const val = data[props.idField]
+  if (typeof val === 'string') {
+    data[props.idField] = val.toLowerCase()
+  }
 }
 
 const handleModalSubmit = (data: Record<string, any>) => {
   const isNew = !editingData.value
+  normalizeIdFieldForNew(data, isNew)
   pendingSubmit.value = true
   submitSnapshot.value = snapshotModelValue(props.modelValue)
 
   // 이벤트 emit (부모에서 실제 저장 처리)
   emit('update', data, isNew)
+}
+
+const handleModalSubmitAndAddAnother = (data: Record<string, any>) => {
+  normalizeIdFieldForNew(data, true)
+  addAnotherPending.value = true
+  emit('update', data, true)
 }
 
 // 행 ID 가져오기
@@ -734,6 +757,11 @@ watch(
         submitSnapshot.value = ''
         handleModalClose()
         selectedRowIds.value.clear()
+      }
+      if (addAnotherPending.value) {
+        addAnotherPending.value = false
+        editingData.value = null
+        addAnotherResetTrigger.value += 1
       }
     }
   },
@@ -1016,9 +1044,10 @@ watch(() => tableContainerRef.value, (el) => {
   }
 }, { immediate: true })
 
-// 선택된 행 ID를 외부에서 접근할 수 있도록 expose
+// 선택된 행 ID 및 모달 닫기 메서드를 외부에서 접근할 수 있도록 expose
 defineExpose({
-  selectedRowIds: computed(() => selectedRowIds.value)
+  selectedRowIds: computed(() => selectedRowIds.value),
+  closeModal: handleModalClose
 })
 </script>
 

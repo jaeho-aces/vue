@@ -15,6 +15,7 @@ export interface VideoConversionServer {
   version: string
   build_date: string | null
   start_date: string | null
+  reg_date: string | null
 }
 
 interface VideoConversionServerInfoState {
@@ -67,8 +68,15 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
         json_date: data.json_date || null,
         version: data.version || '',
         build_date: data.build_date || null,
-        start_date: data.start_date || null
+        start_date: data.start_date || null,
+        reg_date: data.reg_date || null
       }
+    },
+
+    // yn 필드 DB 저장 시 소문자로 정규화
+    toYn(v: any): string {
+      if (v === 'Y' || v === 'y' || v === true || v === 'true') return 'y'
+      return 'n'
     },
 
     // 프론트엔드 데이터를 백엔드 API 형식으로 변환
@@ -78,14 +86,15 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
         trans_name: data.trans_name,
         trans_ip: data.trans_ip,
         trans_port: data.trans_port,
-        alive: data.alive,
+        alive: this.toYn(data.alive),
         alive_time: data.alive_time,
-        json_job: data.json_job,
-        json_yn: data.json_yn,
+        json_job: this.toYn(data.json_job),
+        json_yn: this.toYn(data.json_yn),
         json_date: data.json_date,
         version: data.version,
         build_date: data.build_date,
-        start_date: data.start_date
+        start_date: data.start_date,
+        reg_date: data.reg_date
       }
     },
 
@@ -113,7 +122,7 @@ export const useVideoConversionServerInfoStore = defineStore('videoConversionSer
       await this.getHelper().fetchAll(
         forceRefresh,
         5 * 60 * 1000,
-        '영상변환서버 정보 데이터',
+        '영상 변환 서버 정보 데이터',
         this.getPhpTableName()
       )
     },

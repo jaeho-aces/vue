@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import PhysicalServerInfo from './device/PhysicalServerInfo.vue'
 import VideoConversionInfo from './device/VideoConversionInfo.vue'
 import VideoConversionServerInfo from './device/VideoConversionServerInfo.vue'
 import MediaServerInfo from './device/MediaServerInfo.vue'
@@ -28,39 +29,27 @@ import CameraInfo from './device/CameraInfo.vue'
 import MediaInfo from './device/MediaInfo.vue'
 import VersionManagement from './device/VersionManagement.vue'
 
-// 가상서버 정보 컴포넌트 (임시 - 나중에 구현)
-const VirtualServerInfo = {
-  template: `
-    <div class="flex items-center justify-center h-full min-h-[400px] bg-white">
-      <div class="text-center">
-        <p class="text-xl font-semibold text-slate-700 mb-2">가상서버 정보</p>
-        <p class="text-sm text-slate-400">구현 예정</p>
-      </div>
-    </div>
-  `
-}
-
-// Tab 배열
+// Tab 배열 (맨 첫 번째: 물리 서버 정보)
 const tabs = [
-  '영상변환서버 정보',
-  '가상서버 정보',
-  '영상 파일 전송 서버',
+  '물리 서버 정보',
+  '영상 변환 서버 정보',
   '미디어 서버 정보',
   '카메라 정보',
+  '영상 변환 채널 정보',
   '미디어 정보',
-  '영상변환 채널정보',
+  '영상 파일 전송 서버',
   '버전 관리'
 ] as const
 
 // TabContent Record
 const tabContent: Record<string, any> = {
-  '영상변환서버 정보': VideoConversionServerInfo,
-  '가상서버 정보': VirtualServerInfo,
-  '영상 파일 전송 서버': VideoFileTransferServer,
+  '물리 서버 정보': PhysicalServerInfo,
+  '영상 변환 서버 정보': VideoConversionServerInfo,
   '미디어 서버 정보': MediaServerInfo,
   '카메라 정보': CameraInfo,
+  '영상 변환 채널 정보': VideoConversionInfo,
   '미디어 정보': MediaInfo,
-  '영상변환 채널정보': VideoConversionInfo,
+  '영상 파일 전송 서버': VideoFileTransferServer,
   '버전 관리': VersionManagement
 }
 

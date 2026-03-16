@@ -18,9 +18,15 @@
           }"
         ></div>
         
-        <div class="tree-node">
+        <div
+          class="tree-node"
+          :class="{ 'tree-node-draggable': !node.hasChildren }"
+          :draggable="!node.hasChildren"
+          @dragstart="!node.hasChildren && handleDragStart($event, node)"
+        >
           <button
             @click="toggleNode(node)"
+            @dblclick.stop="onNodeDblclick(node)"
             :class="[
               'tree-node-button',
               {
@@ -98,6 +104,8 @@ interface Props {
   data: TreeNode[]
   itemHeight?: number
   searchTerm?: string
+  /** 표출그룹 등 커스텀 드래그 시 사용. 반환 시 setData(type, value) 적용 */
+  dragPayload?: (node: TreeNode) => { type: string; value: string } | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -107,6 +115,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   nodeClick: [node: TreeNode]
+  nodeDblclick: [node: TreeNode]
 }>()
 
 const openNodes = ref<Set<string>>(new Set())
@@ -170,21 +179,48 @@ const flattenedNodes = computed(() => {
   return flattenTree(filteredData.value)
 })
 
-// 노드 토글
+// 노드 토글 (클릭)
 const toggleNode = (node: TreeNode) => {
   selectedNodeId.value = node.id || null
-  
+
   if (!node.hasChildren) {
     emit('nodeClick', node)
     return
   }
-  
+
   const nodeId = node.id!
   if (openNodes.value.has(nodeId)) {
     openNodes.value.delete(nodeId)
   } else {
     openNodes.value.add(nodeId)
   }
+}
+
+// 노드 더블클릭
+const onNodeDblclick = (node: TreeNode) => {
+  emit('nodeDblclick', node)
+}
+
+const DRAG_PAYLOAD_TYPE = 'application/json'
+
+function handleDragStart(evt: DragEvent, node: TreeNode) {
+  if (!evt.dataTransfer || node.hasChildren) return
+  evt.stopPropagation()
+  if (props.dragPayload) {
+    const custom = props.dragPayload(node)
+    if (custom) {
+      evt.dataTransfer.setData(custom.type, custom.value)
+      evt.dataTransfer.effectAllowed = 'copy'
+      return
+    }
+  }
+  const payload = {
+    chId: node.id ?? '',
+    cctvId: node.label,
+    label: node.label
+  }
+  evt.dataTransfer.setData(DRAG_PAYLOAD_TYPE, JSON.stringify(payload))
+  evt.dataTransfer.effectAllowed = 'copy'
 }
 </script>
 
@@ -229,6 +265,14 @@ const toggleNode = (node: TreeNode) => {
   width: 100%;
   position: relative;
   z-index: 1;
+}
+
+.tree-node-draggable {
+  cursor: grab;
+}
+
+.tree-node-draggable:active {
+  cursor: grabbing;
 }
 
 .tree-node-button {

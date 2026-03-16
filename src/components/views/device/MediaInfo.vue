@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     :model-value="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -9,14 +10,11 @@
     :id-column-width="idColumnWidth"
     id-field="seq"
     preference-key="vms_media_info"
+    hide-new-button
+    hide-edit-button
     @update="handleDataUpdate"
     @delete="handleDataDelete"
   >
-    <template #toolbar-actions-left>
-      <Button @click="handleTransferHistory" variant="info">
-        전송 이력 보기
-      </Button>
-    </template>
   </Table>
 </template>
 
@@ -24,7 +22,6 @@
 import { computed, onMounted, defineComponent, h, ref } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
-import Button from '../../common/Button.vue'
 import { useMediaInfoStore, type Media } from '../../../stores/mediaInfo'
 import { useAlertStore } from '../../../stores/alert'
 
@@ -86,6 +83,8 @@ const DateOnlyCell = defineComponent({
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
 
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
+
 // 컬럼 정의 (백엔드 스키마에 맞춤)
 const columns: TableColumn[] = [
   { id: 'seq', header: '미디어 번호', size: 100, cellComponent: TextCell },
@@ -109,7 +108,7 @@ const rawData = computed(() => mediaStore.items)
 
 // 폼 필드 정의
 const formFields: FormField[] = [
-  { id: 'seq', label: '미디어 번호', type: 'text', required: true, placeholder: '00000~99999' },
+  { id: 'seq', label: '미디어 번호', type: 'text', required: true, placeholder: '00000~99999', readonlyInEdit: true },
   { id: 'gbn', label: '구분 번호', type: 'text', placeholder: '코드(C1)' },
   { id: 'camid', label: '카메라 번호', type: 'text', required: true, placeholder: '00000~99999' },
   { id: 'title', label: '내용 (타이틀)', type: 'text', placeholder: '한글/영문' },
@@ -124,10 +123,7 @@ const formFields: FormField[] = [
 
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
-  if (isSubmitting.value || mediaStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
-    return
-  }
+  if (isSubmitting.value || mediaStore.isLoading) return
   try {
     isSubmitting.value = true
     if (isNew) {
@@ -135,9 +131,10 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     } else {
       await mediaStore.updateMedia(data.seq, data)
     }
+    await mediaStore.fetchMediaList(true)
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const errorMessage = mediaStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   } finally {
@@ -147,16 +144,13 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
 
 // 데이터 삭제 처리
 const handleDataDelete = async (ids: string[]) => {
-  if (isSubmitting.value || mediaStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
-    return
-  }
+  if (isSubmitting.value || mediaStore.isLoading) return
   try {
     isSubmitting.value = true
     await mediaStore.deleteMediaList(ids)
+    await mediaStore.fetchMediaList(true)
     alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = mediaStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   } finally {
@@ -164,19 +158,11 @@ const handleDataDelete = async (ids: string[]) => {
   }
 }
 
-// 버튼 핸들러
-const handleTransferHistory = () => {
-  console.log('전송 이력 보기 버튼 클릭')
-  // TODO: 전송 이력 보기 로직 구현
-}
-
 // 컴포넌트 마운트 시 데이터 로드
 onMounted(async () => {
   try {
     await mediaStore.fetchMediaList()
-  } catch (error) {
-    console.error('미디어 정보 로드 실패:', error)
-  }
+  } catch (_error) {}
 })
 </script>
 

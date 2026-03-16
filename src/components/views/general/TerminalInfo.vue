@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     v-model="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -22,6 +23,7 @@ import { api } from '../../../services/api'
 import { useAlertStore } from '../../../stores/alert'
 
 const alertStore = useAlertStore()
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -92,7 +94,6 @@ const loadTerminalData = async () => {
     
     rawData.value = transformedData
   } catch (error) {
-    console.error('운영단말 정보 로드 실패:', error)
     rawData.value = []
   }
 }
@@ -134,10 +135,10 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       })
     }
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
     // 데이터 다시 로드
     await loadTerminalData()
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const errorMessage = error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }
@@ -158,7 +159,6 @@ const handleDataDelete = async (ids: string[]) => {
     // 데이터 다시 로드
     await loadTerminalData()
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }

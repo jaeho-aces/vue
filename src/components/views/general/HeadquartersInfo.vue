@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     v-model="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -16,13 +17,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineComponent, h } from 'vue'
+import { computed, defineComponent, h, ref } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import { useCommonCodeStore, type CommonCode } from '../../../stores/commonCode'
 import { useAlertStore } from '../../../stores/alert'
 
 const alertStore = useAlertStore()
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -146,9 +148,9 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       await commonCodeStore.updateCommonCode('1', '0', code, commonCodeData)
     }
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
-    // 스토어가 자동으로 업데이트되므로 별도 로드 불필요
+    tableRef.value?.closeModal?.()
+    await commonCodeStore.fetchCommonCodes(true)
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }
@@ -161,7 +163,6 @@ const handleDataDelete = async (ids: string[]) => {
     await commonCodeStore.deleteCommonCodes(ids)
     alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }

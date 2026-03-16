@@ -58,6 +58,7 @@ export interface VideoConversion {
   ch_jpg_size: string
   ch_jpg_kbps?: string
   ch_jpg_keep_count?: number
+  ch_jpg_show_date?: string
   // UI Display Fields (Mapped from codes)
   hq_code?: string
   branch_code?: string
@@ -86,6 +87,11 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
     // ID로 찾기
     getById: (state) => (id: string) => {
       return state.items.find(item => item.ch_id === id)
+    },
+
+    // cctv_id로 채널 찾기
+    getByCctvId: (state) => (cctvId: string) => {
+      return state.items.find(item => (item.cctv_id || '').toLowerCase() === (cctvId || '').toLowerCase())
     },
 
     // 검색
@@ -133,10 +139,17 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
         ch_jpg_size: data.ch_jpg_size || '',
         ch_jpg_kbps: data.ch_jpg_kbps || '',
         ch_jpg_keep_count: data.ch_jpg_keep_count || 0,
+        ch_jpg_show_date: data.ch_jpg_show_date || '',
         hq_code: data.hq_code,
         branch_code: data.branch_code,
         route_code: data.route_code
       }
+    },
+
+    // yn 필드 DB 저장 시 소문자로 정규화
+    toYn(v: any): string {
+      if (v === 'Y' || v === 'y' || v === true || v === 'true') return 'y'
+      return 'n'
     },
 
     // 프론트엔드 데이터를 백엔드 API 형식으로 변환
@@ -150,15 +163,15 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
         ch_vsize: data.ch_vsize,
         ch_vfps: data.ch_vfps,
         ch_vkpbs: data.ch_vkpbs,
-        ch_alive: data.ch_alive,
+        ch_alive: this.toYn(data.ch_alive),
         ch_alive_time: data.ch_alive_time,
-        ch_alive_yn: data.ch_alive_yn,
+        ch_alive_yn: this.toYn(data.ch_alive_yn),
         reg_date: data.reg_date,
-        json_job: data.json_job,
-        json_yn: data.json_yn,
+        json_job: this.toYn(data.json_job),
+        json_yn: this.toYn(data.json_yn),
         json_date: data.json_date,
         kt_cctv: data.kt_cctv,
-        ch_wmv_yn: data.ch_wmv_yn,
+        ch_wmv_yn: this.toYn(data.ch_wmv_yn),
         ch_wmv_venc: data.ch_wmv_venc,
         ch_wmv_vsize: data.ch_wmv_vsize,
         ch_wmv_vfps: data.ch_wmv_vfps,
@@ -169,7 +182,8 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
         job_status: data.job_status,
         ch_jpg_size: data.ch_jpg_size,
         ch_jpg_kbps: data.ch_jpg_kbps,
-        ch_jpg_keep_count: data.ch_jpg_keep_count
+        ch_jpg_keep_count: data.ch_jpg_keep_count,
+        ch_jpg_show_date: data.ch_jpg_show_date ? this.toYn(data.ch_jpg_show_date) : undefined
       }
     },
 
@@ -209,10 +223,7 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
           waitCount++
         }
 
-        if (waitCount >= maxWait) {
-          console.warn('CommonCode 로딩 타임아웃: 매핑을 건너뜁니다.')
-          return false
-        }
+        if (waitCount >= maxWait) return false
       }
 
       return commonCodeStore.items.length > 0
@@ -223,7 +234,7 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
       await this.getHelper().fetchAll(
         forceRefresh,
         CACHE_DURATION_MS,
-        '영상변환 채널정보 데이터',
+        '영상 변환 채널정보 데이터',
         this.getPhpTableName()
       )
 
@@ -305,15 +316,7 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
         })
 
         this.items = [...updatedItems]
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-        const errorStack = error instanceof Error ? error.stack : undefined
-        console.error('소속 본부/노선 데이터 매핑 실패:', {
-          message: errorMessage,
-          stack: errorStack,
-          error
-        })
-      }
+      } catch (_error: unknown) {}
     },
 
     // 데이터 생성 - PHP 백엔드 사용
@@ -353,26 +356,24 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
       )
     },
 
-    // 일괄 변경 - PHP 백엔드 사용
+    // 일괄 변경 - 선택 필드만 전달되므로 기존 항목과 merge 후 update (백엔드 PUT 전체 치환 대응)
     async batchUpdateVideoConversions(chIds: string[], data: Partial<VideoConversion>) {
-      if (this.isLoading) {
-        console.warn('이미 처리 중인 요청이 있습니다.')
-        return
-      }
+      if (this.isLoading) return
 
       try {
         this.isLoading = true
         this.error = null
 
-        // 각 항목을 개별적으로 업데이트
-        const updatePromises = chIds.map(id =>
-          this.getHelper().update(
+        const updatePromises = chIds.map((id) => {
+          const existing = this.getById(id)
+          const merged = existing ? { ...existing, ...data } : (data as VideoConversion)
+          return this.getHelper().update(
             id,
-            data,
+            merged,
             this.getPhpTableName(),
             this.getPhpTableKey()
           )
-        )
+        })
 
         const results = await Promise.all(updatePromises)
 
@@ -386,17 +387,8 @@ export const useVideoConversionInfoStore = defineStore('videoConversionInfo', {
         })
 
         this.lastFetched = Date.now()
-
-        console.log('일괄 변경 완료:', chIds.length, '개')
         return results
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
-        const errorStack = error instanceof Error ? error.stack : undefined
-        console.error('일괄 변경 실패:', {
-          message: errorMessage,
-          stack: errorStack,
-          error
-        })
         this.error = this.getHelper().parseBackendError(error)
         throw error
       } finally {

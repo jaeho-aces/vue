@@ -48,6 +48,14 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 `tables.py` 파일에서 모든 테이블 스키마를 관리합니다. 도로공사 영상변환 시스템의 모든 MGMT_* 테이블이 정의되어 있습니다.
 
+### 마이그레이션 (표출그룹 테이블)
+
+표출그룹 저장/재생 기능을 쓰려면 아래 SQL로 테이블을 생성합니다.
+
+```bash
+psql $DATABASE_URL -f backend/migrations/001_display_group.sql
+```
+
 ### 주요 기능
 
 1. **테이블 기반 자동 CRUD**: URL에 테이블 이름을 포함하여 자동으로 CRUD 작업 수행

@@ -72,6 +72,12 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
       }
     },
 
+    // yn 필드 DB 저장 시 소문자로 정규화
+    toYn(v: any): string {
+      if (v === 'Y' || v === 'y' || v === true || v === 'true') return 'y'
+      return 'n'
+    },
+
     // 프론트엔드 데이터를 백엔드 API 형식으로 변환
     transformToAPI(data: any): any {
       return {
@@ -83,10 +89,10 @@ export const useMediaServerInfoStore = defineStore('mediaServerInfo', {
         fms_passwd: data.fms_passwd,
         fms_port: data.fms_port,
         svr_type: data.svr_type,
-        alive: data.alive,
+        alive: this.toYn(data.alive),
         alive_time: data.alive_time,
-        json_job: data.json_job,
-        json_yn: data.json_yn
+        json_job: this.toYn(data.json_job),
+        json_yn: this.toYn(data.json_yn)
       }
     },
 

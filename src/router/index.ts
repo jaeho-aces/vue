@@ -1,5 +1,7 @@
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { api } from '../services/api'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -33,6 +35,11 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../components/views/Dashboard4View.vue')
   },
   {
+    path: '/Dashboard5View',
+    name: 'Dashboard5Popup',
+    component: () => import('../components/views/Dashboard5View.vue')
+  },
+  {
     path: '/SystemStatusView',
     name: 'SystemStatus',
     component: () => import('../components/views/SystemStatusView.vue')
@@ -41,6 +48,11 @@ const routes: Array<RouteRecordRaw> = [
     path: '/ServerStatusView',
     name: 'ServerStatus',
     component: () => import('../components/views/ServerStatusView.vue')
+  },
+  {
+    path: '/ServerStatusDetail',
+    name: 'ServerStatusDetail',
+    component: () => import('../components/views/ServerStatusDetailView.vue')
   },
   {
     path: '/VideoView',
@@ -56,48 +68,47 @@ const routes: Array<RouteRecordRaw> = [
     path: '/ManagementView',
     name: 'ManagementView',
     component: () => import('../components/views/ManagementView.vue')
-  },
-  {
-    path: '/PrometheusSampleView',
-    name: 'PrometheusSampleView',
-    component: () => import('../components/views/PrometheusSampleView.vue')
-  },
-  {
-    path: '/Settings',
-    name: 'Settings',
-    component: () => import('../components/views/ManagementView.vue')
   }
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(),
+  history: createWebHistory(),
   routes
 })
 
 /** 로그인하지 않으면 로그인 페이지로만 이동 가능. 쿠키로 /me 호출해 복원. */
-// router.beforeEach(async (to, _from, next) => {
-//   const authStore = useAuthStore()
-//   const isLoginPage = to.name === 'Login'
+router.beforeEach(async (to, _from, next) => {
+  const authStore = useAuthStore()
+  const isLoginPage = to.name === 'Login'
 
-//   if (!authStore.authReady) {
-//     await authStore.fetchUser(api)
-//   }
+  if (!authStore.authReady) {
+    await authStore.fetchUser(api)
+  }
 
-//   if (isLoginPage) {
-//     if (authStore.isAuthenticated) {
-//       next({ path: '/', replace: true })
-//     } else {
-//       next()
-//     }
-//     return
-//   }
+  if (isLoginPage) {
+    if (authStore.isAuthenticated) {
+      next({ path: '/', replace: true })
+    } else {
+      next()
+    }
+    return
+  }
 
-//   if (!authStore.isAuthenticated) {
-//     next({ path: '/login', replace: true })
-//     return
-//   }
-//   next()
-// })
+  if (!authStore.isAuthenticated) {
+    next({ path: '/login', replace: true })
+    return
+  }
+
+  if (to.name === 'DeviceManagementView' && !authStore.canAccessDeviceManagement) {
+    next({ path: '/', replace: true })
+    return
+  }
+  if (to.name === 'ManagementView' && !authStore.canAccessGeneralManagement) {
+    next({ path: '/', replace: true })
+    return
+  }
+  next()
+})
 
 export default router
 

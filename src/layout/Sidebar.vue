@@ -21,9 +21,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { LayoutDashboard, Server, Settings, Activity, Users, Video, Monitor, BarChart } from 'lucide-vue-next'
+import { LayoutDashboard, Server, Activity, Users, Video, Monitor } from 'lucide-vue-next'
+import { useAuthStore } from '../stores/auth'
 
 interface Props {
   className?: string
@@ -36,21 +37,28 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const router = useRouter()
+const authStore = useAuthStore()
 const isHovered = ref(false)
 
-const navItems = [
+const allNavItems = [
   { id: 'DashboardPopupView', label: '대시보드', icon: Monitor },
-  { id: 'Dashboard2View', label: '대시보드2', icon: LayoutDashboard },
-  { id: 'Dashboard3View', label: '대시보드3', icon: LayoutDashboard },
-  { id: 'Dashboard4View', label: '대시보드4', icon: LayoutDashboard },
-  { id: 'SystemStatusView', label: '시스템 현황', icon: LayoutDashboard },
+  { id: 'Dashboard5View', label: '대시보드5', icon: LayoutDashboard },
   { id: 'ServerStatusView', label: '서버별 현황', icon: Activity },
   { id: 'VideoView', label: '영상 보기', icon: Video },
   { id: 'DeviceManagementView', label: '장치 관리', icon: Server },
-  { id: 'ManagementView', label: '일반 관리', icon: Users },
-  { id: 'PrometheusSampleView', label: '샘플 페이지', icon: BarChart },
-  { id: 'Settings', label: '설정', icon: Settings }
+  { id: 'ManagementView', label: '일반 관리', icon: Users }
 ]
+
+const navItems = computed(() => {
+  let list = allNavItems
+  if (!authStore.canAccessDeviceManagement) {
+    list = list.filter((item) => item.id !== 'DeviceManagementView')
+  }
+  if (!authStore.canAccessGeneralManagement) {
+    list = list.filter((item) => item.id !== 'ManagementView')
+  }
+  return list
+})
 
 const handleNavigate = (itemId: string) => {
   if (itemId === 'DashboardPopupView') {
@@ -108,6 +116,21 @@ const handleNavigate = (itemId: string) => {
     window.open(
       routeData.href,
       'Dashboard4View',
+      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+    )
+    return
+  }
+
+  if (itemId === 'Dashboard5View') {
+    const width = 1920
+    const height = 1080
+    const left = (window.screen.width - width) / 2
+    const top = (window.screen.height - height) / 2
+    // Use router to resolve URL for hash mode compatibility
+    const routeData = router.resolve({ name: 'Dashboard5Popup' })
+    window.open(
+      routeData.href,
+      'Dashboard5View',
       `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
     )
     return

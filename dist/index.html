@@ -2,14 +2,24 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="./assets/ci-C6O6Dd6C.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CCTV 영상 인터넷 제공 시스템</title>
-    <script type="module" crossorigin src="./assets/index-CGZOc8ps.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CppGkTZp.css">
+    <script type="module" crossorigin src="./assets/index-Chq9NX98.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DFu1rtDy.css">
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app"></div>
+    <!-- ACES WebRTC (AMS7000/HDS7000) - 로드 순서 유지 -->
+    <script src="./aces/md5.js"></script>
+    <script src="./aces/AcesServer.js"></script>
+    <script src="./aces/AcesVideo.js"></script>
+    <script src="./aces/AcesServerHDS7000.js"></script>
+    <script src="./aces/AcesServerAMS7000.js"></script>
+    <script>
+      // Vite/브라우저 환경에서 전역 클래스를 window에 명시적으로 노출
+      if (typeof AcesServerAMS7000 !== 'undefined') window.AcesServerAMS7000 = AcesServerAMS7000;
+    </script>
   </body>
 </html>
 

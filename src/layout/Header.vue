@@ -11,27 +11,50 @@
       <button class="icon-btn" :style="{ color: 'var(--text-secondary)' }">
         <Bell :size="20" />
       </button>
-      <div
-        class="user-profile"
-        :style="{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          backgroundColor: 'var(--bg-tertiary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--text-primary)'
-        }"
-      >
-        <User :size="18" />
+      <div class="user-menu-wrapper" ref="userMenuRef">
+        <button
+          type="button"
+          class="user-profile-btn"
+          aria-haspopup="true"
+          :aria-expanded="showUserMenu"
+          @click.stop="showUserMenu = !showUserMenu"
+        >
+          <User :size="18" />
+        </button>
+        <Transition name="dropdown">
+          <div
+            v-show="showUserMenu"
+            class="user-menu-dropdown"
+            role="menu"
+          >
+            <div class="user-menu-name">
+              {{ authStore.currentUser?.name || authStore.currentUser?.id || '사용자' }}
+            </div>
+            <div class="user-menu-email" v-if="authStore.currentUser?.email">
+              {{ authStore.currentUser.email }}
+            </div>
+            <button
+              type="button"
+              class="user-menu-item user-menu-logout"
+              role="menuitem"
+              @click="handleLogout"
+            >
+              <LogOut :size="16" class="shrink-0" />
+              로그아웃
+            </button>
+          </div>
+        </Transition>
       </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { Search, Bell, User } from 'lucide-vue-next'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+import { Search, Bell, User, LogOut } from 'lucide-vue-next'
+import { useAuthStore } from '../stores/auth'
+import { api } from '../services/api'
 
 interface Props {
   title?: string
@@ -39,6 +62,31 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   title: 'CCTV 영상 인터넷 제공 시스템'
+})
+
+const router = useRouter()
+const authStore = useAuthStore()
+const showUserMenu = ref(false)
+const userMenuRef = ref<HTMLElement | null>(null)
+
+function handleLogout() {
+  showUserMenu.value = false
+  authStore.logout(api).then(() => {
+    router.replace('/login')
+  })
+}
+
+function onClickOutside(e: MouseEvent) {
+  if (userMenuRef.value && !userMenuRef.value.contains(e.target as Node)) {
+    showUserMenu.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutside)
 })
 </script>
 
@@ -82,6 +130,94 @@ const props = withDefaults(defineProps<Props>(), {
 
 .icon-btn:hover {
   background-color: var(--bg-secondary, #f3f4f6);
+}
+
+.user-menu-wrapper {
+  position: relative;
+}
+
+.user-profile-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--bg-tertiary, #f3f4f6);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary, #111827);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-profile-btn:hover {
+  background-color: var(--border-color, #e5e7eb);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  padding: 12px 0;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+}
+
+.user-menu-name {
+  padding: 0 16px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.user-menu-email {
+  padding: 0 16px 12px;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  margin-bottom: 4px;
+}
+
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: none;
+  font-size: 14px;
+  color: var(--text-primary, #111827);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+
+.user-menu-item:hover {
+  background-color: var(--bg-secondary, #f9fafb);
+}
+
+.user-menu-logout {
+  color: var(--text-secondary, #6b7280);
+}
+
+.user-menu-logout:hover {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 
 .flex {

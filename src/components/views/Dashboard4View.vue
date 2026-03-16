@@ -35,7 +35,7 @@
       </div>
 
       <!-- Center Columns: Conversion & Provision Grid -->
-      <div class="flex-[3] grid grid-cols-[1fr_auto_1fr] grid-rows-2 gap-x-1 gap-y-4 p-2 relative">
+      <div class="flex-[3] grid grid-cols-[1fr_auto_1fr] grid-rows-2 gap-x-1 gap-y-4 pt-2 pb-2 pl-2 pr-0 relative">
           
           <!-- Shared Header Labels (Pseudo) -->
 
@@ -127,10 +127,10 @@
 
           <!-- Top Arrow -->
           <div class="flex items-center justify-center">
-             <div class="w-12 h-16 flex items-center justify-center relative">
-               <div class="absolute inset-0 flex items-center justify-center">
-                  <PentaChevronsRight class="w-16 h-16 text-[#00f3ff] animate-pulse opacity-80" />
-               </div>
+             <div class="w-14 h-32 flex items-center justify-center relative group">
+                <!-- Background Glow -->
+                <div class="absolute inset-x-[-8px] inset-y-8 bg-blue-500/10 blur-xl rounded-full animate-pulse"></div>
+                <CyberPipeFlow color="#00f3ff" />
              </div>
           </div>
 
@@ -275,11 +275,11 @@
           </div>
 
           <!-- Bottom Arrow -->
-          <div class="flex items-center justify-center -translate-y-12">
-             <div class="w-12 h-16 flex items-center justify-center relative">
-               <div class="absolute inset-0 flex items-center justify-center">
-                  <PentaChevronsRight class="w-16 h-16 text-[#00f3ff] animate-pulse opacity-80" />
-               </div>
+          <div class="flex items-center justify-center -translate-y-4">
+             <div class="w-14 h-32 flex items-center justify-center relative group">
+                <!-- Background Glow -->
+                <div class="absolute inset-x-[-8px] inset-y-8 bg-blue-500/10 blur-xl rounded-full animate-pulse"></div>
+                <CyberPipeFlow color="#00f3ff" />
              </div>
           </div>
 
@@ -347,27 +347,19 @@
       </div>
 
       <!-- Arrow Between Provision and Integration -->
-      <div class="flex flex-col gap-y-4 py-2 justify-around">
-          <!-- Top Arrow -->
+      <div class="flex flex-col justify-center -ml-1">
+          <!-- Single Centered realistic Pipe -->
           <div class="flex items-center justify-center">
-             <div class="w-12 h-16 flex items-center justify-center relative">
-               <div class="absolute inset-0 flex items-center justify-center">
-                  <PentaChevronsRight class="w-16 h-16 text-[#00f3ff] animate-pulse opacity-80" />
-               </div>
-             </div>
-          </div>
-          <!-- Bottom Arrow -->
-          <div class="flex items-center justify-center -translate-y-12">
-             <div class="w-12 h-16 flex items-center justify-center relative">
-               <div class="absolute inset-0 flex items-center justify-center">
-                  <PentaChevronsRight class="w-16 h-16 text-red-500 animate-pulse opacity-80" />
-               </div>
+             <div class="w-14 h-32 flex items-center justify-center relative group">
+                <!-- Outer Background Glow -->
+                <div class="absolute inset-x-[-8px] inset-y-8 bg-blue-500/10 blur-xl rounded-full animate-pulse"></div>
+                <CyberPipeFlow color="#00f3ff" />
              </div>
           </div>
       </div>
 
       <!-- Right Column: Integration & Connections -->
-      <div class="w-[480px] flex flex-col gap-2 p-2 bg-[#1e293b]/20 border-l border-[#00f3ff]/20 relative">
+      <div class="w-[420px] flex flex-col gap-2 p-2 bg-[#1e293b]/20 border-l border-[#00f3ff]/20 relative">
           
           <!-- Section Title for Integration -->
           <div class="w-full flex justify-center z-30 mb-1">
@@ -384,43 +376,114 @@
              <div class="corner-acc bl"></div>
              <div class="corner-acc br"></div>
              
-             <div class="flex-1 grid grid-cols-2 gap-4 place-content-center w-full relative">
-                <!-- Connect Dotted Lines (From left/provision to here) - Simulated with absolute positioned SVG on parent or simpler here -->
-                
-                <div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 border border-white/5 w-full h-32 transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:border-blue-400/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] group">
-                   <Video class="w-14 h-14 text-orange-400 mb-1 drop-shadow-[0_0_10px_rgba(251,146,60,0.8)]" />
-                   <div class="text-base text-center text-gray-200 font-bold">국토부</div>
-                   <div class="text-sm text-gray-400">6970 / 9000</div>
+             <div class="flex-1 flex flex-col gap-2.5 w-full relative py-1.5 mb-1">
+                <!-- 1. CDN -->
+                <div class="flex flex-row items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 w-full flex-1 transition-all duration-300 hover:bg-white/10 hover:border-blue-400/50 group relative overflow-hidden">
+
+                   <div class="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                      <Globe class="w-6 h-6 text-blue-400 animate-pulse" />
+                   </div>
+                   <div class="flex flex-col min-w-0">
+                      <div class="text-lg text-gray-100 font-black tracking-tight">CDN</div>
+                      <div class="text-[11px] text-blue-300/80 font-medium truncate">대국민 모바일 서비스</div>
+                      <div class="flex items-center gap-2 mt-1">
+                         <div class="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-blue-500 w-3/4 animate-pulse"></div>
+                         </div>
+                         <span class="text-[9px] text-gray-400">77%</span>
+                      </div>
+                   </div>
+                   <div class="ml-auto flex flex-col items-end gap-1 shrink-0">
+                      <div class="text-base text-white font-bold tracking-tighter">4230 / <span class="text-gray-500">5000</span></div>
+                   </div>
                 </div>
 
-                <div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 border border-white/5 w-full h-32 transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:border-blue-400/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] group">
-                   <Globe class="w-14 h-14 text-blue-400 mb-1 animate-pulse drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]" />
-                   <div class="text-base text-center text-gray-200 font-bold">CDN</div>
-                   <div class="text-sm text-gray-400">6970 / 9000</div>
+                <!-- 2. 정지영상 -->
+                <div class="flex flex-row items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 w-full flex-1 transition-all duration-300 hover:bg-white/10 hover:border-emerald-400/50 group relative overflow-hidden">
+
+                   <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                      <Image class="w-6 h-6 text-emerald-400" />
+                   </div>
+                   <div class="flex flex-col min-w-0">
+                      <div class="text-lg text-gray-100 font-black tracking-tight">정지영상</div>
+                      <div class="text-[11px] text-emerald-300/80 font-medium truncate">실시간 스냅샷 연계</div>
+                      <div class="flex items-center gap-2 mt-1">
+                         <div class="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-500 w-[92%]"></div>
+                         </div>
+                         <span class="text-[9px] text-gray-400">92%</span>
+                      </div>
+                   </div>
+                   <div class="ml-auto flex flex-col items-end gap-1 shrink-0">
+                      <div class="text-base text-white font-bold tracking-tighter">1850 / <span class="text-gray-500">2000</span></div>
+                   </div>
                 </div>
 
-                <div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 border border-white/5 w-full h-32 transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:border-blue-400/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] group">
-                   <Smartphone class="w-14 h-14 text-green-400 mb-1 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
-                   <div class="text-base text-center text-gray-200 font-bold">교통정보 앱</div>
+                <!-- 3. 국토부 -->
+                <div class="flex flex-row items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 w-full flex-1 transition-all duration-300 hover:bg-white/10 hover:border-orange-400/50 group relative overflow-hidden">
+
+                   <div class="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
+                      <Video class="w-6 h-6 text-orange-400" />
+                   </div>
+                   <div class="flex flex-col min-w-0">
+                      <div class="text-lg text-gray-100 font-black tracking-tight">국토부</div>
+                      <div class="text-[11px] text-orange-300/80 font-medium truncate">국가교통정보센터 연계</div>
+                      <div class="flex items-center gap-2 mt-1">
+                         <div class="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-orange-500 w-[88%] animate-pulse-slow"></div>
+                         </div>
+                         <span class="text-[9px] text-gray-400">88%</span>
+                      </div>
+                   </div>
+                   <div class="ml-auto flex flex-col items-end gap-1 shrink-0">
+                      <div class="text-base text-white font-bold tracking-tighter">3100 / <span class="text-gray-500">3500</span></div>
+                   </div>
                 </div>
 
-                <div class="flex flex-col items-center justify-center p-3 rounded-xl bg-white/5 border border-white/5 w-40 h-32 transition-all duration-300 hover:bg-white/10 hover:scale-105 hover:border-blue-400/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] group">
-                   <Image class="w-14 h-14 text-green-400 mb-1 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]" />
-                   <div class="text-base text-center text-gray-200 font-bold">정지영상</div>
+                <!-- 4. 교통정보 앱 -->
+                <div class="flex flex-row items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 w-full flex-1 transition-all duration-300 hover:bg-white/10 hover:border-green-400/50 group relative overflow-hidden">
+
+                   <div class="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                      <Smartphone class="w-6 h-6 text-green-400" />
+                   </div>
+                   <div class="flex flex-col min-w-0">
+                      <div class="text-lg text-gray-100 font-black tracking-tight">교통정보 앱</div>
+                      <div class="text-[11px] text-green-300/80 font-medium truncate">통합 모니터링 서비스</div>
+                      <div class="flex items-center gap-2 mt-1">
+                         <div class="h-1 w-20 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 w-[92%]"></div>
+                         </div>
+                         <span class="text-[9px] text-gray-400">92%</span>
+                      </div>
+                   </div>
+                   <div class="ml-auto flex flex-col items-end gap-1 shrink-0">
+                      <div class="text-base text-white font-bold tracking-tighter">4520 / <span class="text-gray-500">4800</span></div>
+                   </div>
                 </div>
+
+
              </div>
           </div>
 
           <!-- Bottom Chart (Overlay) -->
-           <div class="cyber-fancy-panel h-80 border border-[#00f3ff]/30 rounded-lg p-1 relative overflow-hidden backdrop-blur-sm shadow-[inset_0_0_30px_rgba(0,243,255,0.05)]">
-              <!-- Corner Accents -->
-              <div class="corner-acc tl"></div>
-              <div class="corner-acc tr"></div>
-              <div class="corner-acc bl"></div>
-              <div class="corner-acc br"></div>
-              <div class="absolute inset-0 opacity-20 bg-gradient-to-t from-blue-500/20 to-transparent"></div>
-              <MultiLineCyberChart :labels="trafficLabels" :datasets="trafficDatasets" />
-           </div>
+            <div class="cyber-fancy-panel h-80 border border-[#00f3ff]/30 rounded-lg pb-4 pt-12 px-2 relative overflow-hidden backdrop-blur-sm shadow-[inset_0_0_30px_rgba(0,243,255,0.05)] flex flex-col">
+               <!-- Corner Accents -->
+               <div class="corner-acc tl"></div>
+               <div class="corner-acc tr"></div>
+               <div class="corner-acc bl"></div>
+               <div class="corner-acc br"></div>
+               <div class="absolute inset-0 opacity-20 bg-gradient-to-t from-blue-500/20 to-transparent"></div>
+               <!-- Chart Title -->
+               <div class="absolute top-4 left-5 z-20 flex items-center gap-2">
+                 <div class="p-1 rounded bg-blue-500/20 border border-blue-500/30">
+                   <Activity class="w-3.5 h-3.5 text-[#00f3ff]" />
+                 </div>
+                 <span class="text-sm font-bold text-gray-200 tracking-tight drop-shadow-md">CDN 전용망 사용량</span>
+               </div>
+               <div class="flex-1 min-h-0">
+                  <MultiLineCyberChart :labels="trafficLabels" :datasets="trafficDatasets" />
+               </div>
+            </div>
  
 
 
@@ -432,7 +495,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ArrowUpDown, Video, Globe, Smartphone, Image } from 'lucide-vue-next'
+import { ArrowUpDown, Video, Globe, Smartphone, Image, Activity } from 'lucide-vue-next'
 import MultiLineCyberChart from '../common/MultiLineCyberChart.vue'
 
 // Inline SimpleGauge for this view only (or could be extracted)
@@ -559,34 +622,114 @@ const RegionalNode = defineComponent({
 })
 
 
-const PentaChevronsRight = defineComponent({
-  props: { class: String },
+
+
+const CyberPipeFlow = defineComponent({
+  props: { color: { type: String, default: '#00f3ff' } },
   setup(props) {
-    return () => h('svg', {
-      xmlns: 'http://www.w3.org/2000/svg',
-      width: '32',
-      height: '24',
-      viewBox: '0 0 32 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      'stroke-width': '2',
-      'stroke-linecap': 'round',
-      'stroke-linejoin': 'round',
-      class: props.class
-    }, [
-      h('path', { d: 'm2 17 5-5-5-5' }),
-      h('path', { d: 'm8 17 5-5-5-5' }),
-      h('path', { d: 'm14 17 5-5-5-5' }),
-      h('path', { d: 'm20 17 5-5-5-5' }),
-      h('path', { d: 'm26 17 5-5-5-5' })
+    const pipeId = Math.random().toString(36).substr(2, 9)
+    return () => h('div', { class: 'relative w-full h-full flex items-center justify-center scale-110' }, [
+      h('svg', { 
+        viewBox: '0 0 100 85', 
+        class: 'w-full h-auto overflow-visible drop-shadow-[0_0_15px_rgba(0,100,255,0.4)]',
+        preserveAspectRatio: 'xMidYMid meet'
+      }, [
+        h('defs', [
+          // Semi-Transparent Brushed Metal Gradient
+          h('linearGradient', { id: `brushed-metal-${pipeId}`, x1: '0%', y1: '0%', x2: '0%', y2: '100%' }, [
+            h('stop', { offset: '0%', 'stop-color': '#0f172a', 'stop-opacity': '0.8' }),
+            h('stop', { offset: '30%', 'stop-color': '#475569', 'stop-opacity': '0.7' }),
+            h('stop', { offset: '48%', 'stop-color': '#94a3b8', 'stop-opacity': '0.6' }),
+            h('stop', { offset: '50%', 'stop-color': '#cbd5e1', 'stop-opacity': '0.5' }),
+            h('stop', { offset: '52%', 'stop-color': '#94a3b8', 'stop-opacity': '0.6' }),
+            h('stop', { offset: '70%', 'stop-color': '#475569', 'stop-opacity': '0.7' }),
+            h('stop', { offset: '100%', 'stop-color': '#020617', 'stop-opacity': '0.8' })
+          ]),
+          // Neon Blue Frame Glow
+          h('filter', { id: `neon-frame-glow-${pipeId}` }, [
+            h('feGaussianBlur', { stdDeviation: '3', result: 'blur' }),
+            h('feMerge', {}, [
+              h('feMergeNode', { in: 'blur' }),
+              h('feMergeNode', { in: 'SourceGraphic' })
+            ])
+          ]),
+          // Cyan Chevron Glow
+          h('filter', { id: `chevron-glow-${pipeId}` }, [
+            h('feGaussianBlur', { stdDeviation: '2', result: 'blur' }),
+            h('feMerge', {}, [
+              h('feMergeNode', { in: 'blur' }),
+              h('feMergeNode', { in: 'SourceGraphic' })
+            ])
+          ])
+        ]),
+
+        // 1. Outer Neon Blue Frames (Top/Bottom) - Responsive for Narrower Pipe
+        [
+          { d: 'M 5,5 Q 50,10 95,5' },
+          { d: 'M 5,75 Q 50,70 95,75' }
+        ].map((frame, idx) => h('path', {
+          key: idx,
+          d: frame.d,
+          fill: 'none',
+          stroke: '#2563eb',
+          'stroke-width': '3.5',
+          'stroke-linecap': 'round',
+          filter: `url(#neon-frame-glow-${pipeId})`,
+          opacity: 0.9
+        })),
+
+        // 2. Heavy Industrial Double Flanges - Adjusted for narrower pipe
+        [
+          { x: 5, label: 'L' },
+          { x: 75, label: 'R' }
+        ].map(flangeSet => h('g', { key: flangeSet.label }, [
+          h('rect', { x: flangeSet.x, y: 10, width: 9, height: 60, rx: 1.5, fill: `url(#brushed-metal-${pipeId})`, stroke: 'rgba(255,255,255,0.1)', 'stroke-width': '0.5', opacity: 0.85 }),
+          h('rect', { x: flangeSet.x + 11, y: 10, width: 9, height: 60, rx: 1.5, fill: `url(#brushed-metal-${pipeId})`, stroke: 'rgba(255,255,255,0.1)', 'stroke-width': '0.5', opacity: 0.85 }),
+          // Bolts
+          [18, 28, 40, 52, 62].map(by => [
+             h('circle', { cx: flangeSet.x + 4.5, cy: by, r: 1.8, fill: '#64748b', opacity: 0.3 }),
+             h('circle', { cx: flangeSet.x + 15.5, cy: by, r: 1.8, fill: '#64748b', opacity: 0.3 })
+          ])
+        ])),
+
+        // 3. Main Pipe Body (Narrower and Semi-Transparent)
+        h('rect', { 
+          x: 23, y: 18, width: 54, height: 44, 
+          fill: `url(#brushed-metal-${pipeId})`, 
+          opacity: 0.7,
+          stroke: 'rgba(255,255,255,0.1)',
+          'stroke-width': '0.5'
+        }),
+
+        // 4. Center Neon Chevron Flow (>>>) - Narrower Spacing
+        [0, 1, 2].map(i => h('path', {
+          key: i,
+          d: 'M 0,0 L 7,11 L 0,22',
+          fill: 'none',
+          stroke: props.color,
+          'stroke-width': '3.5',
+          'stroke-linejoin': 'round',
+          'stroke-linecap': 'round',
+          filter: `url(#chevron-glow-${pipeId})`,
+          class: 'animate-liquid-pulse',
+          style: { 
+            animationDelay: `${i * 0.4}s`,
+            transform: `translate(${32 + i * 11}px, 29px)`
+          }
+        })),
+
+        // 5. Crystalline Surface Highlights
+        h('rect', { x: 23, y: 20, width: 94, height: 2, fill: '#fff', opacity: 0.15 }),
+        h('rect', { x: 23, y: 58, width: 94, height: 1.5, fill: '#fff', opacity: 0.1 })
+      ])
     ])
   }
 })
 
-const trafficLabels = ref(['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00'])
+const trafficLabels = ref(['14:00', '14:10', '14:20', '14:30', '14:40', '14:50', '15:00'])
 const trafficDatasets = ref([
-    { label: 'Inbound', data: [300, 450, 200, 700, 600, 850, 500, 900, 750, 400], color: '#22d3ee' },
-    { label: 'Outbound', data: [200, 350, 150, 500, 400, 650, 300, 700, 550, 300], color: '#a855f7' }
+    { label: '교통센터', data: [3.2, 4.5, 2.8, 7.1, 6.2, 8.5, 5.4], color: '#22d3ee' },
+    { label: '본사', data: [2.1, 3.8, 1.9, 5.0, 4.3, 6.7, 3.2], color: '#a855f7' }
 ])
 </script>
 
@@ -619,14 +762,32 @@ const trafficDatasets = ref([
   z-index: 0;
 }
 
-.clip-arrow {
-  clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
-}
+
 
 /* .integration-item removed in favor of inline classes */
 
 .animate-spin-slow {
   animation: spin 8s linear infinite;
+}
+
+@keyframes liquid-pulse {
+  0% { transform: translateX(-15px); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateX(40px); opacity: 0; }
+}
+
+.animate-liquid-pulse {
+  animation: liquid-pulse 2.1s linear infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
 }
 
 .cyber-fancy-panel {
@@ -709,6 +870,19 @@ const trafficDatasets = ref([
 .tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 4px; }
 .bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 4px; }
 .br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 4px; }
+
+@keyframes heavy-flicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  33% { opacity: 0.8; filter: brightness(0.8); }
+  35% { opacity: 0.9; filter: brightness(1.2); }
+  66% { opacity: 1; filter: brightness(1); }
+  68% { opacity: 0.7; filter: brightness(0.7); }
+  70% { opacity: 1; filter: brightness(1.5); }
+}
+
+.animate-flicker-heavy {
+  animation: heavy-flicker 4s linear infinite;
+}
 
 @keyframes spin {
   from { transform: rotate(0deg); }

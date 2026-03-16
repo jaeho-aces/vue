@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
+@import "tailwindcss";
 
 /* 커스텀 폰트 정의 */
 @font-face {
@@ -741,12 +741,63 @@
     flex-shrink: 0;
   }
 
-  /* VideoView – button group used 2 groups × 4+ items */
+  /* VideoView – 레이아웃 드롭다운(맨 왼쪽) + button groups */
   .video-view-button-group-container {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.75rem;
     flex-shrink: 0;
+  }
+
+  .video-view-toolbar-right {
+    margin-left: auto;
+  }
+
+  .video-view-layout-dropdown-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* 레이아웃 라벨+셀렉트를 툴바 버튼 그룹과 동일한 컨테이너 스타일로 */
+  .video-view-layout-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f1f5f9;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #e2e8f0;
+  }
+
+  .video-view-layout-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  .video-view-layout-select {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+    background-color: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    min-width: 4rem;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M3 4.5 L6 7.5 L9 4.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.4rem center;
+    padding-right: 1.5rem;
+  }
+
+  .video-view-layout-select:hover,
+  .video-view-layout-select:focus {
+    border-color: #94a3b8;
+    outline: none;
   }
 
   .video-view-button-group {
@@ -1634,40 +1685,6 @@
     transform: scale(0.95);
   }
 
-  /* PrometheusSampleView – status dot pulse + scrollbars (keyframes/pseudo require component classes) */
-  @keyframes prometheus-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  .prometheus-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: currentColor;
-    animation: prometheus-pulse 2s infinite;
-  }
-
-  .prometheus-metrics-grid::-webkit-scrollbar,
-  .prometheus-json-content::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  .prometheus-metrics-grid::-webkit-scrollbar-track,
-  .prometheus-json-content::-webkit-scrollbar-track {
-    background: #f9fafb;
-  }
-
-  .prometheus-metrics-grid::-webkit-scrollbar-thumb,
-  .prometheus-json-content::-webkit-scrollbar-thumb {
-    background: #e5e7eb;
-    border-radius: 4px;
-  }
-
-  .prometheus-metrics-grid::-webkit-scrollbar-thumb:hover,
-  .prometheus-json-content::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
-  }
 }
 
 

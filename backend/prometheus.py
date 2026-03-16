@@ -1,325 +1,327 @@
+"""
+Prometheus 연동: query/query_range API 호출 및 range 차트 REST.
+SSE 스트림(서버별 현황)은 server_status 모듈에서 DB와 조합해 제공한다.
+"""
 import os
-import asyncio
 import time
-import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import httpx
-from fastapi import Request
-from fastapi.responses import StreamingResponse
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# 프로메테우스 서버 URL 설정
-PROMETHEUS_URL = os.getenv(
-    "PROMETHEUS_URL"
-)
-
-# 프로메테우스 HTTP 클라이언트 (재사용)
+PROMETHEUS_URL = (os.getenv("PROMETHEUS_URL") or "").strip()
+NODE_EXPORTER_PORT = 9100
+# 차트 range 쿼리 step (예: "1m", "5m"). 환경변수 PROMETHEUS_STEP
+PROMETHEUS_STEP = (os.getenv("PROMETHEUS_STEP") or "1m").strip() or "1m"
 _prometheus_client: Optional[httpx.AsyncClient] = None
 
 
 async def get_prometheus_client() -> httpx.AsyncClient:
-    """프로메테우스 HTTP 클라이언트를 가져오거나 생성합니다."""
     global _prometheus_client
     if _prometheus_client is None:
         _prometheus_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(10.0, connect=5.0),
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            timeout=httpx.Timeout(15.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
         )
     return _prometheus_client
 
 
 async def close_prometheus_client():
-    """프로메테우스 HTTP 클라이언트를 종료합니다."""
     global _prometheus_client
     if _prometheus_client:
         await _prometheus_client.aclose()
         _prometheus_client = None
 
 
-# 프로메테우스 쿼리 함수
 async def query_prometheus(query: str) -> Dict[str, Any]:
-    """
-    프로메테우스 서버에 PromQL 쿼리를 실행합니다.
-    
-    Args:
-        query: PromQL 쿼리 문자열
-        
-    Returns:
-        프로메테우스 API 응답 딕셔너리
-    """
+    if not PROMETHEUS_URL:
+        return {"status": "error", "error": "PROMETHEUS_URL not set"}
     client = await get_prometheus_client()
     try:
         url = f"{PROMETHEUS_URL}/api/v1/query"
-        params = {"query": query}
-        response = await client.get(url, params=params)
+        response = await client.get(url, params={"query": query})
         response.raise_for_status()
         result = response.json()
-        # status 필드가 없으면 추가
         if "status" not in result:
             result["status"] = "success"
         return result
-    except httpx.TimeoutException:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 응답 시간 초과 (URL: {PROMETHEUS_URL})",
-            "errorType": "timeout",
-            "query": query
-        }
-    except httpx.ConnectError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 연결 실패: {PROMETHEUS_URL}에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요.",
-            "errorType": "connection_error",
-            "query": query,
-            "details": str(e)
-        }
-    except httpx.RequestError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 요청 실패: {str(e)}",
-            "errorType": "request_error",
-            "query": query,
-            "details": str(e)
-        }
-    except httpx.HTTPStatusError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 HTTP 오류: {e.response.status_code} {e.response.text[:200]}",
-            "errorType": "http_error",
-            "query": query,
-            "statusCode": e.response.status_code
-        }
     except Exception as e:
         return {
             "status": "error",
-            "error": f"프로메테우스 쿼리 실행 실패: {str(e)}",
-            "errorType": "unknown",
+            "error": str(e),
+            "errorType": "request_error",
             "query": query,
-            "details": str(e)
         }
 
 
-# 프로메테우스 Range Query 함수
 async def query_prometheus_range(
     query: str,
     start: Optional[float] = None,
     end: Optional[float] = None,
-    step: str = "15s"
+    step: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    프로메테우스 Range Query를 실행합니다.
-    
-    Args:
-        query: PromQL 쿼리 문자열
-        start: 시작 시간 (Unix timestamp), None이면 현재 시간 - 5분
-        end: 종료 시간 (Unix timestamp), None이면 현재 시간
-        step: 샘플링 간격 (예: "15s", "1m")
-    
-    Returns:
-        Range Query 결과
-    """
-    client = await get_prometheus_client()
-    
-    # 기본값 설정
+    if step is None:
+        step = PROMETHEUS_STEP
+    if not PROMETHEUS_URL:
+        return {"status": "error", "error": "PROMETHEUS_URL not set"}
     if end is None:
         end = time.time()
     if start is None:
-        start = end - 300  # 5분 전
-    
+        start = end - 3600
+    client = await get_prometheus_client()
     try:
         url = f"{PROMETHEUS_URL}/api/v1/query_range"
-        params = {
-            "query": query,
-            "start": start,
-            "end": end,
-            "step": step
-        }
+        params = {"query": query, "start": start, "end": end, "step": step}
         response = await client.get(url, params=params)
         response.raise_for_status()
         result = response.json()
         if "status" not in result:
             result["status"] = "success"
         return result
-    except httpx.TimeoutException:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 응답 시간 초과 (URL: {PROMETHEUS_URL})",
-            "errorType": "timeout"
-        }
-    except httpx.ConnectError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 연결 실패: {PROMETHEUS_URL}에 연결할 수 없습니다.",
-            "errorType": "connection_error",
-            "details": str(e)
-        }
-    except httpx.RequestError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 요청 실패: {str(e)}",
-            "errorType": "request_error",
-            "details": str(e)
-        }
-    except httpx.HTTPStatusError as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 서버 HTTP 오류: {e.response.status_code} {e.response.text[:200]}",
-            "errorType": "http_error",
-            "statusCode": e.response.status_code
-        }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": f"프로메테우스 Range Query 실행 실패: {str(e)}",
-            "errorType": "unknown",
-            "details": str(e)
+        return {"status": "error", "error": str(e), "errorType": "request_error"}
+
+
+def _instance_matcher(ip: str) -> str:
+    if not ip:
+        return ""
+    return f'instance="{ip}:{NODE_EXPORTER_PORT}"'
+
+
+def _promql_cpu(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    return f'round(avg by (instance) (irate(node_cpu_seconds_total{{{m}, mode!="idle"}}[1m])) * 100, 0.1)'
+
+
+def _promql_memory(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    return f"100 * (1 - (node_memory_MemAvailable_bytes{{{m}}} / node_memory_MemTotal_bytes{{{m}}}))"
+
+
+def _promql_disk(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    fs = 'fstype!~"tmpfs|overlay"'
+    return f'100 * (1 - (node_filesystem_avail_bytes{{mountpoint="/",{fs},{m}}} / node_filesystem_size_bytes{{mountpoint="/",{fs},{m}}}))'
+
+
+def _promql_memory_used_gb(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    return f"(node_memory_MemTotal_bytes{{{m}}} - node_memory_MemAvailable_bytes{{{m}}}) / 1024 / 1024 / 1024"
+
+
+def _promql_disk_used_gb(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    fs = 'fstype!~"tmpfs|overlay"'
+    return f'(node_filesystem_size_bytes{{mountpoint="/",{fs},{m}}} - node_filesystem_avail_bytes{{mountpoint="/",{fs},{m}}}) / 1024 / 1024 / 1024'
+
+
+def _promql_network(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    return f'sum by (instance) (rate(node_network_receive_bytes_total{{{m},device!~"lo|veth.*"}}[5m])) / 1024 / 1024'
+
+
+def _promql_network_transmit(ip: str) -> str:
+    m = _instance_matcher(ip)
+    if not m:
+        return ""
+    return f'sum by (instance) (rate(node_network_transmit_bytes_total{{{m},device!~"lo|veth.*"}}[5m])) / 1024 / 1024'
+
+
+def _parse_vector_by_ip(res: Dict) -> Dict[str, float]:
+    """Prometheus vector result -> ip -> value (average if multiple series per ip)."""
+    out: Dict[str, List[float]] = {}
+    if res.get("status") != "success" or res.get("data", {}).get("resultType") != "vector":
+        return {}
+    for r in res.get("data", {}).get("result") or []:
+        instance = (r.get("metric") or {}).get("instance")
+        if not instance:
+            continue
+        ip = instance.rsplit(":", 1)[0] if ":" in instance else instance
+        val = r.get("value")
+        if val is not None and len(val) >= 2:
+            try:
+                n = float(val[1])
+                if ip not in out:
+                    out[ip] = []
+                out[ip].append(n)
+            except (TypeError, ValueError):
+                pass
+    return {ip: sum(vals) / len(vals) for ip, vals in out.items()}
+
+
+def _clamp_0_100(v: float) -> float:
+    return max(0.0, min(100.0, v)) if isinstance(v, (int, float)) else 0.0
+
+
+async def fetch_instant_metrics_for_ips(ips: List[str]) -> Dict[str, Dict[str, float]]:
+    """IP별 CPU/Memory/Disk/Network instant 메트릭. 연결 0명일 때는 호출하지 않음."""
+    result: Dict[str, Dict[str, float]] = {}
+    for ip in ips:
+        if not ip:
+            continue
+        cpu_res = await query_prometheus(_promql_cpu(ip))
+        mem_res = await query_prometheus(_promql_memory(ip))
+        disk_res = await query_prometheus(_promql_disk(ip))
+        net_res = await query_prometheus(_promql_network(ip))
+        cpu_map = _parse_vector_by_ip(cpu_res)
+        mem_map = _parse_vector_by_ip(mem_res)
+        disk_map = _parse_vector_by_ip(disk_res)
+        net_map = _parse_vector_by_ip(net_res)
+        raw_cpu = cpu_map.get(ip)
+        memory = mem_map.get(ip)
+        disk = disk_map.get(ip)
+        network_mb = net_map.get(ip)
+        if raw_cpu is None and memory is None and disk is None and network_mb is None:
+            continue
+        if raw_cpu is not None:
+            cpu = _clamp_0_100(raw_cpu)
+        else:
+            cpu = 0.0
+        result[ip] = {
+            "cpu": _clamp_0_100(cpu),
+            "memory": _clamp_0_100(memory if memory is not None else 0),
+            "disk": _clamp_0_100(disk if disk is not None else 0),
+            "networkMb": max(0.0, network_mb if network_mb is not None else 0),
         }
+    return result
 
 
-# 프로메테우스 수집할 지표 목록 (사용량 계산 쿼리)
-PROMETHEUS_QUERIES = [
-    "node_cpu_seconds_total{mode=\"idle\"}",  # CPU idle 시간
-    "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",  # Memory 사용률 (%)
-    "rate(node_network_receive_bytes_total[1m])",  # Network 수신 속도 (bytes/s)
-    "rate(node_network_transmit_bytes_total[1m])"   # Network 송신 속도 (bytes/s)
-]
+async def _fetch_range_chart_for_ip(ip: str, start_ts: float, end_ts: float, step: str) -> Dict[str, List[Dict[str, Any]]]:
+    """단일 IP에 대해 range 차트 데이터 조회. memory/disk는 value(%) + usedGb 병합."""
+    cpu_res = await query_prometheus_range(_promql_cpu(ip), start_ts, end_ts, step)
+    mem_res = await query_prometheus_range(_promql_memory(ip), start_ts, end_ts, step)
+    mem_used_res = await query_prometheus_range(_promql_memory_used_gb(ip), start_ts, end_ts, step)
+    disk_res = await query_prometheus_range(_promql_disk(ip), start_ts, end_ts, step)
+    disk_used_res = await query_prometheus_range(_promql_disk_used_gb(ip), start_ts, end_ts, step)
+    net_res = await query_prometheus_range(_promql_network(ip), start_ts, end_ts, step)
+    net_tx_res = await query_prometheus_range(_promql_network_transmit(ip), start_ts, end_ts, step)
+    cpu_pts = _append_end_time_point(_parse_matrix_to_chart_points(cpu_res), end_ts)
+    mem_merged = _merge_pct_with_used_gb(
+        _parse_matrix_to_chart_points(mem_res),
+        _parse_matrix_to_chart_points(mem_used_res),
+    )
+    mem_pts = _append_end_time_point(mem_merged, end_ts)
+    disk_merged = _merge_pct_with_used_gb(
+        _parse_matrix_to_chart_points(disk_res),
+        _parse_matrix_to_chart_points(disk_used_res),
+    )
+    disk_pts = _append_end_time_point(disk_merged, end_ts)
+    net_pts = _append_end_time_point(_parse_matrix_to_chart_points(net_res), end_ts)
+    net_tx_pts = _append_end_time_point(_parse_matrix_to_chart_points(net_tx_res), end_ts)
+    return {
+        "cpu": cpu_pts,
+        "memory": mem_pts,
+        "disk": disk_pts,
+        "network": net_pts,
+        "networkTransmit": net_tx_pts,
+    }
 
-# Range Query용 쿼리 (과거 데이터 조회)
-PROMETHEUS_RANGE_QUERIES = {
-    "cpu_usage": "node_cpu_seconds_total{mode=\"idle\"}",
-    "memory_usage": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
-    "network_receive": "rate(node_network_receive_bytes_total[1m])",
-    "network_transmit": "rate(node_network_transmit_bytes_total[1m])"
-}
+
+def _parse_matrix_to_chart_points(res: Dict) -> List[Dict[str, Any]]:
+    """Prometheus matrix result -> [{ time: "HH:mm", value: number }, ...]."""
+    out = []
+    if res.get("status") != "success" or res.get("data", {}).get("resultType") != "matrix":
+        return out
+    results = res.get("data", {}).get("result") or []
+    if not results:
+        return out
+    values = results[0].get("values") or []
+    for pair in values:
+        if len(pair) < 2:
+            continue
+        ts, raw = pair[0], pair[1]
+        try:
+            t = int(float(ts))
+            v = float(raw)
+        except (TypeError, ValueError):
+            continue
+        from datetime import datetime
+        dt = datetime.fromtimestamp(t)
+        time_str = f"{dt.hour:02d}:{dt.minute:02d}"
+        out.append({"time": time_str, "value": v})
+    return out
+
+
+def _append_end_time_point(points: List[Dict[str, Any]], end_ts: float) -> List[Dict[str, Any]]:
+    """x축 오른쪽 끝이 요청 종료 시각(현재 시각)이 되도록 마지막 포인트 추가."""
+    from datetime import datetime
+    dt = datetime.fromtimestamp(end_ts)
+    time_str = f"{dt.hour:02d}:{dt.minute:02d}"
+    last_value = points[-1]["value"] if points else 0
+    if points and points[-1].get("time") == time_str:
+        return points
+    extra: Dict[str, Any] = {"time": time_str, "value": last_value}
+    if points and "usedGb" in points[-1]:
+        extra["usedGb"] = points[-1]["usedGb"]
+    return points + [extra]
+
+
+def _merge_pct_with_used_gb(
+    pct_points: List[Dict[str, Any]],
+    used_gb_points: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """동일 step으로 조회한 % 시계열과 used GB 시계열을 인덱스로 병합. [{ time, value, usedGb }, ...]."""
+    out = []
+    for i, p in enumerate(pct_points):
+        row: Dict[str, Any] = {"time": p["time"], "value": p["value"]}
+        if i < len(used_gb_points):
+            try:
+                row["usedGb"] = round(float(used_gb_points[i]["value"]), 2)
+            except (TypeError, ValueError, KeyError):
+                pass
+        out.append(row)
+    return out
 
 
 def register_prometheus_routes(app):
-    """프로메테우스 관련 엔드포인트를 FastAPI 앱에 등록합니다."""
-    
-    # SSE 스트리밍 엔드포인트
-    @app.get("/prometheus/stream")
-    async def prometheus_stream(request: Request):
-        """
-        프로메테우스 지표를 SSE로 실시간 스트리밍합니다.
-        5초 간격으로 프로메테우스에 쿼리를 실행하고 결과를 전송합니다.
-        연결 실패 시에도 에러 정보를 포함하여 계속 전송합니다.
-        """
-        async def event_generator():
+    """Prometheus API 전용 라우트 (query, range-chart). SSE 스트림은 server_status에서 등록."""
+    @app.get("/api/prometheus/range-chart")
+    async def prometheus_range_chart(
+        ip: str,
+        start: str,
+        end: str,
+        step: Optional[str] = None,
+    ):
+        """단일 서버(IP)에 대한 CPU/Memory/Disk/Network 시계열. 상세 페이지 차트용."""
+        if step is None:
+            step = PROMETHEUS_STEP
+        if not ip or ip == "-":
+            return {"cpu": [], "memory": [], "disk": [], "network": [], "networkTransmit": []}
+
+        def _parse_ts(s: str) -> Optional[float]:
             try:
-                # 초기 연결 정보 전송
-                initial_data = {
-                    "timestamp": time.time(),
-                    "type": "connection_info",
-                    "prometheus_url": PROMETHEUS_URL,
-                    "queries": PROMETHEUS_QUERIES,
-                    "message": "프로메테우스 SSE 스트림 시작"
-                }
-                yield f"data: {json.dumps(initial_data, ensure_ascii=False)}\n\n"
-                
-                while True:
-                    # 클라이언트 연결 확인
-                    if await request.is_disconnected():
-                        break
-                    
-                    try:
-                        # 모든 쿼리 실행
-                        results = {}
-                        has_error = False
-                        
-                        for query in PROMETHEUS_QUERIES:
-                            result = await query_prometheus(query)
-                            results[query] = result
-                            # 에러가 있는지 확인
-                            if result.get("status") == "error":
-                                has_error = True
-                        
-                        # SSE 형식으로 데이터 전송
-                        data = {
-                            "timestamp": time.time(),
-                            "queries": results,
-                            "has_error": has_error,
-                            "prometheus_url": PROMETHEUS_URL
-                        }
-                        
-                        yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                        
-                    except Exception as e:
-                        # 개별 쿼리 실행 중 에러 발생 시에도 계속 진행
-                        error_data = {
-                            "timestamp": time.time(),
-                            "type": "query_error",
-                            "error": str(e),
-                            "message": "쿼리 실행 중 오류 발생, 계속 시도합니다."
-                        }
-                        yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
-                    
-                    # 5초 대기
-                    await asyncio.sleep(5)
-                    
-            except asyncio.CancelledError:
-                # 클라이언트 연결이 끊어졌을 때
+                return float(s)
+            except (TypeError, ValueError):
                 pass
-            except Exception as e:
-                # 치명적 에러 발생 시 에러 메시지 전송
-                error_data = {
-                    "timestamp": time.time(),
-                    "type": "fatal_error",
-                    "error": str(e),
-                    "message": "SSE 스트림 오류 발생"
-                }
-                yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
-        
-        return StreamingResponse(
-            event_generator(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"
-            }
-        )
-    
-    # Range Query 엔드포인트 (과거 데이터 조회)
+            try:
+                from datetime import datetime
+                return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+            except (TypeError, ValueError):
+                return None
+        start_ts = _parse_ts(start)
+        end_ts = _parse_ts(end)
+        if start_ts is None or end_ts is None:
+            return {"cpu": [], "memory": [], "disk": [], "network": [], "networkTransmit": []}
+        return await _fetch_range_chart_for_ip(ip, start_ts, end_ts, step)
+
     @app.get("/prometheus/range")
     async def prometheus_range(
         query: str,
         start: Optional[float] = None,
         end: Optional[float] = None,
-        step: str = "15s"
+        step: str = "15s",
     ):
-        """
-        프로메테우스 Range Query를 실행합니다.
-        
-        Args:
-            query: PromQL 쿼리 문자열
-            start: 시작 시간 (Unix timestamp), None이면 현재 시간 - 5분
-            end: 종료 시간 (Unix timestamp), None이면 현재 시간
-            step: 샘플링 간격 (예: "15s", "1m")
-        
-        Returns:
-            Range Query 결과
-        """
         return await query_prometheus_range(query, start, end, step)
-    
-    # 초기 데이터 로드 엔드포인트 (모든 메트릭의 최근 5분 데이터)
-    @app.get("/prometheus/initial-data")
-    async def prometheus_initial_data():
-        """
-        페이지 로드 시 최근 5분간의 모든 메트릭 데이터를 반환합니다.
-        """
-        end_time = time.time()
-        start_time = end_time - 300  # 5분 전
-        
-        results = {}
-        for metric_name, query in PROMETHEUS_RANGE_QUERIES.items():
-            result = await query_prometheus_range(query, start_time, end_time, "15s")
-            results[metric_name] = result
-        
-        return {
-            "status": "success",
-            "start_time": start_time,
-            "end_time": end_time,
-            "metrics": results
-        }

@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string
   name: string
   email: string
+  group_name: string
 }
 
 interface AuthState {
@@ -21,7 +22,11 @@ export const useAuthStore = defineStore('auth', {
   getters: {
     isAuthenticated: (state) => !!state.user,
     isLoggedIn: (state) => !!state.user,
-    currentUser: (state) => state.user
+    currentUser: (state) => state.user,
+    canAccessDeviceManagement: (state) =>
+      (state.user?.group_name ?? 'user').toLowerCase() === 'admin',
+    canAccessGeneralManagement: (state) =>
+      (state.user?.group_name ?? 'user').toLowerCase() === 'admin'
   },
 
   actions: {
@@ -54,7 +59,14 @@ export const useAuthStore = defineStore('auth', {
         const res = await api.get('/api/auth/me')
         const user = res.data?.user
         if (user?.id) {
-          this.user = { id: user.id, name: user.name, email: user.email ?? '' }
+          const userRecord = user as unknown as Record<string, unknown>
+          const raw = userRecord.group_name ?? userRecord.groupName ?? 'user'
+          this.user = {
+            id: user.id,
+            name: user.name,
+            email: user.email ?? '',
+            group_name: String(raw).trim().toLowerCase() || 'user'
+          }
         } else {
           this.user = null
         }

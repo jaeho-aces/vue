@@ -87,13 +87,27 @@
         <div
           v-for="(card, idx) in menuCards"
           :key="idx"
-          @click="handleNavigate(card.path)"
-          class="group relative bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden flex flex-col h-full"
+          @click="handleCardClick(card)"
+          :class="[
+            'group relative rounded-2xl p-6 border border-slate-200 shadow-sm transition-all duration-300 overflow-visible flex flex-col h-full',
+            isCardReadOnly(card)
+              ? 'bg-slate-50 border-slate-100 cursor-not-allowed opacity-75 hover:opacity-90'
+              : 'bg-white hover:shadow-xl cursor-pointer'
+          ]"
         >
-          <!-- Gradient Background on Hover -->
+          <!-- 읽기 전용 카드 호버 시 툴팁 (카드 아래 표시) -->
+          <div
+            v-if="isCardReadOnly(card)"
+            class="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-2 bg-slate-800 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-20 shadow-lg"
+          >
+            권한이 없습니다. 관리자만 접근 가능합니다.
+          </div>
+
+          <!-- Gradient Background on Hover (비활성 카드에서는 약하게) -->
           <div
             :class="[
-              'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300',
+              'absolute inset-0 bg-gradient-to-br transition-opacity duration-300 rounded-2xl',
+              isCardReadOnly(card) ? 'opacity-0' : 'opacity-0 group-hover:opacity-5',
               card.color
             ]"
           />
@@ -220,7 +234,7 @@ const handleLogout = async () => {
   router.replace('/login')
 }
 
-const menuCards = [
+const allMenuCards = [
   {
     title: '시스템 현황',
     description: '전체 시스템의 상태와 주요 지표를 한눈에 파악합니다.',
@@ -267,6 +281,19 @@ const menuCards = [
     lightColor: 'bg-amber-50 text-amber-600'
   }
 ]
+
+const menuCards = computed(() => allMenuCards)
+
+function isCardReadOnly(card: (typeof allMenuCards)[number]) {
+  if (card.path === '/DeviceManagementView' && !authStore.canAccessDeviceManagement) return true
+  if (card.path === '/ManagementView' && !authStore.canAccessGeneralManagement) return true
+  return false
+}
+
+function handleCardClick(card: (typeof allMenuCards)[number]) {
+  if (isCardReadOnly(card)) return
+  handleNavigate(card.path)
+}
 
 const systemStatus = [
   { label: '카메라 가동률', value: '98.5%', status: 'normal' as const, icon: Video },

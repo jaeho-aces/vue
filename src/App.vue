@@ -50,6 +50,6 @@ const shouldShowContent = computed(() => {
 // ============================================================
 
 const isPopup = computed(() => {
-  return route.path === '/DashboardPopupView' || route.path === '/Dashboard2View' || route.path === '/Dashboard3View' || route.path === '/Dashboard4View'
+  return route.path === '/DashboardPopupView' || route.path === '/Dashboard2View' || route.path === '/Dashboard3View' || route.path === '/Dashboard4View' || route.path === '/Dashboard5View'
 })
 </script>

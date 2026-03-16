@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     :model-value="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -122,6 +123,30 @@ const YesNoCell = defineComponent({
   }
 })
 
+const StatusCell = defineComponent({
+  props: {
+    value: {
+      type: [String, Number, Boolean],
+      default: ''
+    }
+  },
+  setup(props) {
+    const valueStr = String(props.value || '').toLowerCase()
+    const isAlive = valueStr === 'y' || valueStr === 'true' || props.value === true
+
+    const statusClass = isAlive ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'
+    const dotClass = isAlive ? 'bg-green-500' : 'bg-slate-400'
+    const statusText = isAlive ? '정상' : '중지'
+
+    return () => h('span', {
+      class: ['inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium', statusClass]
+    }, [
+      h('span', { class: ['w-1.5 h-1.5 rounded-full', dotClass] }),
+      statusText
+    ])
+  }
+})
+
 // 등록일자: YYYY-MM-DD 형식으로만 표시 (timestamp에서 날짜 부분만 추출)
 function formatDateOnly(value: string | number | null | undefined): string {
   if (value == null || value === '') return ''
@@ -165,9 +190,11 @@ const DateOnlyCell = defineComponent({
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
 
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
+
 // 컬럼 정의 (MGMT_CCTV 스키마에 맞춤). 본부/지사/노선은 코드명 표시용 컬럼 사용
 const columns: TableColumn[] = [
-  { id: 'cctv_id', header: '카메라 ID', size: 140, cellComponent: TextCell },
+  { id: 'cctv_id', header: 'ID', size: 140, cellComponent: TextCell },
   { id: 'camera_no', header: '관리 번호', size: 100, cellComponent: TextCell },
   { id: 'hq_name', header: '소속 본부', size: 120, cellComponent: TextCell },
   { id: 'branch_name', header: '소속 지사', size: 120, cellComponent: TextCell },
@@ -189,8 +216,8 @@ const columns: TableColumn[] = [
   { id: 'fileurl_wmv', header: 'WMV 경로', size: 160, cellComponent: TextCell },
   { id: 'fileurl_mp4', header: 'MP4 경로', size: 180, cellComponent: TextCell },
   { id: 'fileurl_img', header: '정지영상 경로', size: 160, cellComponent: TextCell },
-  { id: 'stat', header: '처리 중', size: 90, cellComponent: YesNoCell },
-  { id: 'alive', header: '동작 여부', size: 90, cellComponent: YesNoCell },
+{ id: 'stat', header: '처리 중', size: 90, cellComponent: YesNoCell },
+{ id: 'alive', header: '동작 여부', size: 90, cellComponent: StatusCell },
   { id: 'alive_yn', header: 'ALIVE 사용', size: 90, cellComponent: YesNoCell },
   { id: 'update_date', header: '수정 일자', size: 160, cellComponent: DateOnlyCell },
   { id: 'last_cctv_time', header: '마지막 CCTV 시간', size: 160, cellComponent: DateOnlyCell },
@@ -227,10 +254,9 @@ const rawData = computed(() => {
   })
 })
 
-// 폼 필드 정의: 명세 순서. 카메라 번호 → 소속 본부 → 소속 지사 → 노선 → 고속도로 이름 → 고속도로 ID → 이정 → 설치 지역 → Encoder URL → WMS Port → 링크 시작/종료 → 설치 방향 → 경도/위도 → HLS URL → 공인 URL → 스트림 용도 → 변환/파일제공/미디어 서버.
+// 폼 필드 정의: 명세 순서. 카메라 ID(cctv_id) → 소속 본부 → 소속 지사 → 노선 → 고속도로 이름 → 고속도로 ID → 이정 → 설치 지역 → Encoder URL → WMS Port → 링크 시작/종료 → 설치 방향 → 경도/위도 → HLS URL → 공인 URL → 스트림 용도 → 변환/파일제공/미디어 서버.
 const formFields = computed<FormField[]>(() => [
-  { id: 'cctv_id', label: '', type: 'hidden' },
-  { id: 'camera_no', label: '카메라 번호', type: 'id', required: true, placeholder: '숫자 4자리', maxLength: 4, pattern: '^[0-9]{1,4}$', patternMessage: '숫자 4자리만 입력 가능합니다.' },
+  { id: 'cctv_id', label: '카메라 ID', type: 'text', required: true, placeholder: 'cctv0000XXXX', maxLength: 12, readonlyInEdit: true },
   { id: 'hq_code', label: '소속 본부', type: 'select', required: true, placeholder: '본부 선택', options: headquartersOptions.value },
   {
     id: 'branch_code',
@@ -262,7 +288,6 @@ const formFields = computed<FormField[]>(() => [
     id: 'public_url',
     label: '공인 URL',
     type: 'text',
-    required: true,
     placeholder: 'rtmp://... 또는 rtsp://...'
   },
   {
@@ -320,10 +345,7 @@ function toCameraPayload(data: Record<string, any>): Record<string, any> {
 
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
-  if (isSubmitting.value || cameraStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
-    return
-  }
+  if (isSubmitting.value || cameraStore.isLoading) return
   try {
     isSubmitting.value = true
     // 수정 시 폼에 없는 필드(alive, alive_yn, location 등)는 기존 행 값 유지
@@ -333,44 +355,44 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     })()
     const payload = toCameraPayload(merged)
     if (isNew) {
-      // 신규: 카메라 ID, 등록일자(현재시간), STAT/ALIVE/HLS_ALIVE 기본값 적용(입력 없음)
-      const cameraNo = String(payload.camera_no ?? '').replace(/\D/g, '').slice(0, 4)
-      payload.cctv_id = 'CCTV0000' + cameraNo.padStart(4, '0')
+      // 신규: 카메라 ID(CCTV0000XXXX 형식, 문자열 12자리) → cctv_id 전체, 관리번호(camera_no)는 마지막 XXXX만 저장
+      const cctvId = String(payload.cctv_id ?? '').trim().slice(0, 12)
+      payload.cctv_id = cctvId
+      payload.camera_no = cctvId.slice(-4)
       const now = new Date()
       const nowStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
       payload.reg_date = nowStr
-      payload.stat = payload.stat ?? 'N'
-      payload.alive = payload.alive ?? 'N'
-      payload.hls_alive = payload.hls_alive ?? 'N'
-      payload.alive_yn = payload.alive_yn ?? 'N'
+      payload.stat = (payload.stat ?? 'n').toString().toLowerCase()
+      payload.alive = (payload.alive ?? 'n').toString().toLowerCase()
+      payload.hls_alive = (payload.hls_alive ?? 'n').toString().toLowerCase()
+      payload.alive_yn = (payload.alive_yn ?? 'n').toString().toLowerCase()
       payload.hls_duration = payload.hls_duration ?? '0'
       payload.update_date = payload.update_date ?? nowStr
       payload.last_cctv_time = payload.last_cctv_time ?? nowStr
       payload.ftp_sent_date = payload.ftp_sent_date ?? nowStr
       await cameraStore.createCamera(payload as Camera)
 
-      // 신규 카메라 등록 성공 후 MGMT_CHANNEL에 채널 등록 (ch_id = CCTV → CH)
-      const cctvId = payload.cctv_id as string
-      const chId = (cctvId || '').replace(/^CCTV/, 'CH')
+      // 신규 카메라 등록 성공 후 MGMT_CHANNEL에 채널 등록 (ch_id = CCTV → CH). DB 컬럼 길이 제한 준수
+      const rawChId = (String(payload.cctv_id || '')).replace(/^CCTV/i, 'CH')
       const channelPayload = {
-        ch_id: chId,
-        cctv_id: cctvId,
-        trans_id: merged.trans_id ?? '',
-        fms_id: merged.fms_id ?? '',
-        ch_venc: '',
-        ch_vsize: '',
+        ch_id: rawChId.slice(0, 10),
+        cctv_id: String(payload.cctv_id ?? '').slice(0, 12),
+        trans_id: String(merged.trans_id ?? '').slice(0, 10),
+        fms_id: String(merged.fms_id ?? '').slice(0, 11),
+        ch_venc: 'h264',
+        ch_vsize: '3',
         ch_vfps: '',
         ch_vkpbs: '',
-        ch_alive: 'N',
+        ch_alive: 'y',
         ch_alive_time: null as string | null,
-        ch_alive_yn: '',
+        ch_alive_yn: 'y',
         reg_date: nowStr,
-        json_job: 'N',
-        json_yn: 'N',
+        json_job: 'n',
+        json_yn: 'n',
         json_date: nowStr,
         kt_cctv: '',
-        ch_wmv_yn: 'N',
-        ch_wmv_venc: '',
+        ch_wmv_yn: 'n',
+        ch_wmv_venc: '4',
         ch_wmv_vsize: '',
         ch_wmv_vfps: '',
         ch_wmv_vkpbs: '',
@@ -378,14 +400,13 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
         sms_host_ip: '',
         sms_date: null as string | null,
         job_status: '',
-        ch_jpg_size: '',
+        ch_jpg_size: '3',
         ch_jpg_kbps: '',
         ch_jpg_keep_count: 0
       }
       try {
         await videoConversionInfoStore.createVideoConversion(channelPayload as VideoConversion)
       } catch (channelError: any) {
-        console.error('채널 정보 등록 실패:', channelError)
         const channelDetail = channelError.response?.data?.detail || videoConversionInfoStore.error || ''
         const channelDetailText = typeof channelDetail === 'string'
           ? channelDetail
@@ -400,9 +421,10 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
     } else {
       await cameraStore.updateCamera(payload.cctv_id, payload)
     }
+    await cameraStore.fetchCameras(true)
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const detail = error.response?.data?.detail || cameraStore.error || ''
     const detailText = typeof detail === 'string'
       ? detail
@@ -427,18 +449,39 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   }
 }
 
-// 데이터 삭제 처리
+// 카메라 cctv_id → 영상 변환 채널 ch_id (생성 시와 동일 규칙: CCTV→CH, 최대 10자)
+function cctvIdToChId(cctvId: string): string {
+  const raw = (cctvId || '').replace(/^CCTV/i, 'CH')
+  return raw.slice(0, 10)
+}
+
+// 데이터 삭제 처리: 연계된 채널 정보를 먼저 삭제한 뒤 카메라 삭제
 const handleDataDelete = async (ids: string[]) => {
-  if (isSubmitting.value || cameraStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
-    return
-  }
+  if (isSubmitting.value || cameraStore.isLoading) return
   try {
     isSubmitting.value = true
+    // 연계 채널 ch_id 수집: store에 있으면 실제 ch_id 사용, 없으면 cctv_id→ch_id 변환 (생성 규칙과 동일)
+    const chIds: string[] = []
+    for (const cctvId of ids) {
+      const channel = videoConversionInfoStore.getByCctvId(cctvId)
+      if (channel?.ch_id) {
+        chIds.push(channel.ch_id)
+      } else {
+        chIds.push(cctvIdToChId(cctvId))
+      }
+    }
+    const uniqueChIds = [...new Set(chIds)]
+    if (uniqueChIds.length > 0) {
+      try {
+        await videoConversionInfoStore.deleteVideoConversions(uniqueChIds)
+      } catch (channelErr: any) {
+        alertStore.show('연계 채널 삭제 중 오류가 발생했습니다. 카메라만 삭제합니다.', 'warning')
+      }
+    }
     await cameraStore.deleteCameras(ids)
+    await cameraStore.fetchCameras(true)
     alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = cameraStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   } finally {
@@ -457,13 +500,11 @@ onMounted(() => {
 
 // 서버 할당 버튼 핸들러
 const handleServerAssign = () => {
-  console.log('서버 할당 클릭')
   // TODO: 서버 할당 로직 구현
 }
 
 // CDN 연계 정보 생성 버튼 핸들러
 const handleCdnInfoCreate = () => {
-  console.log('CDN 연계 정보 생성 클릭')
   // TODO: CDN 연계 정보 생성 로직 구현
 }
 </script>

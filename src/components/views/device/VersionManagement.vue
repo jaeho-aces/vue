@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     :model-value="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -17,7 +18,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, defineComponent, h } from 'vue'
+import { computed, onMounted, defineComponent, h, ref } from 'vue'
 import Table, { type TableColumn } from '../../common/Table.vue'
 import { type FormField } from '../../common/DataFormModal.vue'
 import { useVersionMgtStore, type Version } from '../../../stores/versionMgt'
@@ -62,6 +63,8 @@ const DateOnlyCell = defineComponent({
 const checkboxColumnWidth = 50
 const idColumnWidth = 120
 const columnWidths = [150, 120, 200, 120]
+
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
 
 // 컬럼 정의
 const columns: TableColumn[] = [
@@ -123,9 +126,10 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       // 수정
       await versionStore.updateVersion(data.version_id, data)
     }
+    await versionStore.fetchVersions(true)
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const detail = error.response?.data?.detail || versionStore.error || ''
     const detailText = typeof detail === 'string'
       ? detail
@@ -152,9 +156,9 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
 const handleDataDelete = async (ids: string[]) => {
   try {
     await versionStore.deleteVersions(ids)
+    await versionStore.fetchVersions(true)
     alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = versionStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }

@@ -21,9 +21,7 @@ watch(() => route.path, (newPath) => {
 // 페이지 최초 로드 시 CommonCode 스토어 로드 (캐싱)
 onMounted(async () => {
   if (commonCodeStore.items.length === 0) {
-    console.log('CommonCode 스토어 초기 로드 시작...')
     await commonCodeStore.fetchCommonCodes()
-    console.log('CommonCode 스토어 초기 로드 완료:', commonCodeStore.items.length, '개')
   }
 })
 
@@ -65,7 +63,7 @@ const handleNavigate = (page: string) => {
 .page-content {
   flex: 1;
   overflow: hidden;
-  padding: 24px;
+  padding: 28px 24px;
   background-color: var(--bg-primary, #ffffff);
   display: flex;
   flex-direction: column;

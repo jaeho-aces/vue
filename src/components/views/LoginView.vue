@@ -114,12 +114,17 @@ const handleLogin = async () => {
       return
     }
     const passwordHash = await sha256Hex(pwd)
-    const res = await api.post<{ user: { id: string; name: string; email: string } }>(
+    const res = await api.post<{ user: { id: string; name: string; email: string; group_name?: string } }>(
       '/api/auth/login',
       { user_id: uid, password: passwordHash, nonce }
     )
     const user = res.data.user
-    authStore.login({ id: user.id, name: user.name, email: user.email || '' })
+    authStore.login({
+      id: user.id,
+      name: user.name,
+      email: user.email || '',
+      group_name: (user.group_name ?? 'user').toLowerCase()
+    })
     router.push('/')
   } catch (err: any) {
     alertStore.show(getLoginErrorMessage(err), 'error')

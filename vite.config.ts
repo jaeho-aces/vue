@@ -1,7 +1,32 @@
+import { readdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import { viteSingleFile } from 'vite-plugin-singlefile'
+import { minify } from 'terser'
+
+/** 빌드 후 dist/aces/*.js 파일을 minify하는 플러그인 */
+function acesMinifyPlugin() {
+  let outDir = 'dist'
+  return {
+    name: 'aces-minify',
+    configResolved(config: { build?: { outDir?: string } }) {
+      outDir = config.build?.outDir ?? 'dist'
+    },
+    async closeBundle() {
+      const acesDir = join(process.cwd(), outDir, 'aces')
+      if (!existsSync(acesDir)) return
+      const files = readdirSync(acesDir).filter((f) => f.endsWith('.js'))
+      for (const f of files) {
+        const filePath = join(acesDir, f)
+        const code = readFileSync(filePath, 'utf-8')
+        const result = await minify(code, { compress: true, mangle: true })
+        if (result.code) writeFileSync(filePath, result.code)
+      }
+    }
+  }
+}
 
 export default defineConfig(({ mode }) => {
   // 환경 변수 로드
@@ -10,7 +35,7 @@ export default defineConfig(({ mode }) => {
   const singleFile = mode === 'singlefile'
 
   return {
-    plugins: [vue(), tailwindcss(), ...(singleFile ? [viteSingleFile()] : [])],
+    plugins: [vue(), tailwindcss(), ...(singleFile ? [viteSingleFile()] : []), acesMinifyPlugin()],
     base: './',
     server: {
       port: 5173,

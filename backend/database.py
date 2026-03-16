@@ -11,7 +11,22 @@ from tables import (
     get_table_key as get_table_key_from_schema,
     is_table_exists as is_table_exists_in_schema
 )
-from auth import process_mgmt_user_password_body
+from auth import process_mgmt_user_password_body, get_current_user_from_request
+
+# 장치 관리 전용 테이블: admin이 아니면 REST 접근 403
+DEVICE_MANAGEMENT_TABLES = {
+    "MGMT_CHANNEL",
+    "MGMT_TRANS",
+    "MGMT_FMS",
+    "MGMT_CCTV",
+    "MGMT_PHYSICAL_SERVER",
+}
+# 일반 관리 전용 테이블: admin이 아니면 REST 접근 403
+GENERAL_MANAGEMENT_TABLES = {
+    "MGMT_USER",
+    "MGMT_OPER_TERMINAL",
+}
+ADMIN_ONLY_TABLES = DEVICE_MANAGEMENT_TABLES | GENERAL_MANAGEMENT_TABLES
 
 # backend/.env 를 항상 로드 (실행 경로가 프로젝트 루트여도 동작)
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
@@ -24,14 +39,25 @@ db_pool: Optional[AsyncConnectionPool] = None
 
 
 def init_db_pool():
-    """데이터베이스 연결 풀을 초기화합니다."""
+    """데이터베이스 연결 풀 인스턴스를 생성합니다. open=False 이므로 사용 전 open_db_pool() 호출 필요."""
     global db_pool
     if db_pool is None:
         if not DATABASE_URL:
             raise RuntimeError(
                 "DATABASE_URL가 설정되지 않았습니다. backend/.env 파일에 DATABASE_URL=postgresql://... 를 넣어 주세요."
             )
-        db_pool = AsyncConnectionPool(DATABASE_URL, min_size=1, max_size=10)
+        db_pool = AsyncConnectionPool(DATABASE_URL, min_size=1, max_size=10, open=False)
+    return db_pool
+
+
+async def open_db_pool():
+    """비동기 연결 풀을 엽니다. 앱 startup 시 한 번 호출."""
+    pool = init_db_pool()
+    await pool.open()
+
+
+def get_db_pool() -> Optional[AsyncConnectionPool]:
+    """현재 풀 인스턴스를 반환 (테스트 등에서 사용)."""
     return db_pool
 
 
@@ -241,7 +267,7 @@ def register_database_routes(app):
     # get-db-array.php 기능 (프론트 프록시가 /api 그대로 전달하므로 /api 경로도 등록)
     @app.post("/api/get-db-array")
     @app.post("/get-db-array")
-    async def get_db_array(request: GetDbArrayRequest):
+    async def get_db_array(body: GetDbArrayRequest, req: Request):
         """
         PHP get-db-array.php와 동일한 기능
         POST /get-db-array
@@ -249,27 +275,32 @@ def register_database_routes(app):
         """
         try:
             # 테이블 이름 추출 (앞뒤 '/' 제거)
-            table = request.target.strip('/')
+            table = body.target.strip('/')
             
             # 테이블 존재 확인
             if not await is_table_exists(table):
                 raise HTTPException(status_code=404, detail=f"Table {table} not found")
+            if table.upper() in ADMIN_ONLY_TABLES:
+                user_row = await get_current_user_from_request(req)
+                group_name = ((user_row.get("group_name") or user_row.get("GROUP_NAME")) or "").strip().lower() if user_row else ""
+                if group_name != "admin":
+                    raise HTTPException(status_code=403, detail="Admin role required for this resource")
             
             # 필드 목록 생성
-            fields = get_field_list(request.layout)
+            fields = get_field_list(body.layout)
             
             # WHERE 절 생성
-            if request.where:
-                condition = request.where
+            if body.where:
+                condition = body.where
             else:
                 # query를 처리하여 WHERE 절 생성
                 # IN 절 처리: 같은 키에 대해 여러 값이 있으면 IN 절로 변환
                 # 예: [{cctv_id: '1'}, {cctv_id: '2'}] -> cctv_id IN ('1', '2')
                 key_values: Dict[str, List[Any]] = {}
                 
-                if isinstance(request.query, list):
+                if isinstance(body.query, list):
                     # 리스트인 경우: 각 항목에서 키-값 쌍 추출
-                    for item in request.query:
+                    for item in body.query:
                         if isinstance(item, dict):
                             for key, val in item.items():
                                 if key not in ["dojo_preventCache", "SQL_ORDER"]:
@@ -277,9 +308,9 @@ def register_database_routes(app):
                                         key_values[key] = []
                                     if val not in key_values[key]:
                                         key_values[key].append(val)
-                elif isinstance(request.query, dict):
+                elif isinstance(body.query, dict):
                     # 딕셔너리인 경우: 기존 방식 사용
-                    for key, val in request.query.items():
+                    for key, val in body.query.items():
                         if key not in ["dojo_preventCache", "SQL_ORDER"]:
                             if key not in key_values:
                                 key_values[key] = []
@@ -301,8 +332,8 @@ def register_database_routes(app):
             
             # ORDER BY 절
             order_clause = ""
-            if request.order:
-                order_clause = f" ORDER BY {get_quoted_order(request.order)}"
+            if body.order:
+                order_clause = f" ORDER BY {get_quoted_order(body.order)}"
             
             # SQL 생성
             where_clause = f" WHERE {condition}" if condition and condition != "1=1" else ""
@@ -340,7 +371,11 @@ def register_database_routes(app):
         try:
             if not await is_table_exists(table_name):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
-            
+            if table_name.upper() in ADMIN_ONLY_TABLES:
+                user_row = await get_current_user_from_request(request)
+                group_name = ((user_row.get("group_name") or user_row.get("GROUP_NAME")) or "").strip().lower() if user_row else ""
+                if group_name != "admin":
+                    raise HTTPException(status_code=403, detail="Admin role required for this resource")
             # 쿼리 파라미터를 Dict로 변환
             query_params = dict(request.query_params)
             order = get_quoted_order(query_params.pop("SQL_ORDER", ""))
@@ -383,6 +418,11 @@ def register_database_routes(app):
         try:
             if not await is_table_exists(table_name):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
+            if table_name.upper() in ADMIN_ONLY_TABLES:
+                user_row = await get_current_user_from_request(request)
+                group_name = ((user_row.get("group_name") or user_row.get("GROUP_NAME")) or "").strip().lower() if user_row else ""
+                if group_name != "admin":
+                    raise HTTPException(status_code=403, detail="Admin role required for this resource")
             
             body = await request.json()
             process_mgmt_user_password_body(body, table_name)
@@ -390,6 +430,11 @@ def register_database_routes(app):
             # DB 실제 컬럼명 사용 (PostgreSQL은 따옴표 없이 생성 시 소문자)
             actual_columns = await get_actual_column_names(table_name)
             actual_by_lower = {c.lower(): c for c in actual_columns} if actual_columns else {}
+            # MGMT_TRANS / MGMT_PHYSICAL_SERVER 등록 시 reg_date 컬럼이 있고 값이 없으면 현재시간(timestamp) 설정
+            if str(table_name).upper() in ("MGMT_TRANS", "MGMT_PHYSICAL_SERVER") and "reg_date" in actual_by_lower:
+                if not any(k for k in body.keys() if str(k).lower() == "reg_date"):
+                    from datetime import datetime
+                    body["reg_date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             keys = []
             values = []
@@ -429,7 +474,11 @@ def register_database_routes(app):
         try:
             if not await is_table_exists(table_name):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
-            
+            if table_name.upper() in ADMIN_ONLY_TABLES:
+                user_row = await get_current_user_from_request(request)
+                group_name = ((user_row.get("group_name") or user_row.get("GROUP_NAME")) or "").strip().lower() if user_row else ""
+                if group_name != "admin":
+                    raise HTTPException(status_code=403, detail="Admin role required for this resource")
             body = await request.json()
             process_mgmt_user_password_body(body, table_name)
 
@@ -518,7 +567,11 @@ def register_database_routes(app):
         try:
             if not await is_table_exists(table_name):
                 raise HTTPException(status_code=404, detail=f"Table {table_name} not found")
-            
+            if table_name.upper() in ADMIN_ONLY_TABLES:
+                user_row = await get_current_user_from_request(request)
+                group_name = ((user_row.get("group_name") or user_row.get("GROUP_NAME")) or "").strip().lower() if user_row else ""
+                if group_name != "admin":
+                    raise HTTPException(status_code=403, detail="Admin role required for this resource")
             table_key = await get_table_key(table_name)
             # MGMT_CODE: 삭제 시 그룹구분+코드 2개만 키로 사용
             if table_name and str(table_name).upper() == "MGMT_CODE":

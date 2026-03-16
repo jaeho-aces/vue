@@ -8,7 +8,7 @@ passlib 대신 bcrypt 패키지를 직접 사용 (passlib과 bcrypt 4.1+ 호환 
 import os
 import secrets
 import time
-from typing import Dict
+from typing import Dict, Optional
 
 import bcrypt
 from fastapi import HTTPException, Request
@@ -90,7 +90,7 @@ AUTH_COOKIE_NAME = "session_token"
 AUTH_COOKIE_MAX_AGE = 86400 * 7  # 7일
 
 
-async def _get_user_by_user_id(user_id: str) -> dict | None:
+async def _get_user_by_user_id(user_id: str) -> Optional[dict]:
     """DB에서 user_id로 사용자 한 명 조회. 없으면 None."""
     from database import db_pool
     from psycopg.rows import dict_row
@@ -99,10 +99,19 @@ async def _get_user_by_user_id(user_id: str) -> dict | None:
     async with db_pool.connection() as conn:
         async with conn.cursor(row_factory=dict_row) as cur:
             await cur.execute(
-                "SELECT user_id, user_name, email FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)",
+                "SELECT user_id, user_name, email, group_name FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)",
                 (user_id,),
             )
             return await cur.fetchone()
+
+
+async def get_current_user_from_request(request: Request) -> Optional[dict]:
+    """쿠키의 session_token으로 현재 로그인 사용자 row 조회. 없거나 무효면 None."""
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    if not token or token not in _login_tokens:
+        return None
+    user_id = _login_tokens[token]
+    return await _get_user_by_user_id(user_id)
 
 
 def register_auth_routes(app):
@@ -149,7 +158,7 @@ def register_auth_routes(app):
             async with db_pool.connection() as conn:
                 async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(
-                        'SELECT user_id, user_name, email, password FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)',
+                        'SELECT user_id, user_name, email, password, group_name FROM mgmt_user WHERE TRIM(user_id) = TRIM(%s)',
                         (user_id,),
                     )
                     row = await cur.fetchone()
@@ -163,10 +172,12 @@ def register_auth_routes(app):
             raise HTTPException(status_code=401, detail="Invalid user_id or password")
         token = secrets.token_hex(32)
         _login_tokens[token] = user_id
+        raw_group = (row.get("group_name") or row.get("GROUP_NAME") or "user").strip() or "user"
         user_payload = {
             "id": row.get("user_id") or row.get("USER_ID") or user_id,
             "name": (row.get("user_name") or row.get("USER_NAME") or "").strip(),
             "email": (row.get("email") or row.get("EMAIL") or "").strip() or "",
+            "group_name": raw_group.lower(),
         }
         response = JSONResponse(content={"user": user_payload})
         secure = os.getenv("AUTH_COOKIE_SECURE", "false").lower() in ("1", "true", "yes")
@@ -193,11 +204,13 @@ def register_auth_routes(app):
         if not row:
             del _login_tokens[token]
             raise HTTPException(status_code=401, detail="User not found")
+        raw_group = (row.get("group_name") or row.get("GROUP_NAME") or "user").strip() or "user"
         return {
             "user": {
                 "id": row.get("user_id") or row.get("USER_ID") or user_id,
                 "name": (row.get("user_name") or row.get("USER_NAME") or "").strip(),
                 "email": (row.get("email") or row.get("EMAIL") or "").strip() or "",
+                "group_name": raw_group.lower(),
             },
         }
 

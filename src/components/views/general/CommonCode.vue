@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     :model-value="rawDataWithKey"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -25,6 +26,7 @@ import { useAlertStore } from '../../../stores/alert'
 // Pinia 스토어 사용
 const commonCodeStore = useCommonCodeStore()
 const alertStore = useAlertStore()
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
 const isSubmitting = ref(false) // 중복 요청 방지
 
 // 셀 컴포넌트
@@ -117,7 +119,6 @@ const formFields: FormField[] = [
 // 데이터 업데이트 처리 (생성/수정)
 const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
   if (isSubmitting.value || commonCodeStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
     return
   }
   try {
@@ -142,8 +143,9 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       )
     }
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
+    await commonCodeStore.fetchCommonCodes(true)
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 저장 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   } finally {
@@ -154,7 +156,6 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
 // 데이터 삭제 처리 (keys는 복합 키 배열)
 const handleDataDelete = async (keys: string[]) => {
   if (isSubmitting.value || commonCodeStore.isLoading) {
-    console.warn('이미 처리 중인 요청이 있습니다.')
     return
   }
   try {
@@ -162,7 +163,6 @@ const handleDataDelete = async (keys: string[]) => {
     await commonCodeStore.deleteCommonCodes(keys)
     alertStore.show('삭제 완료', 'success')
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = commonCodeStore.error || error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   } finally {

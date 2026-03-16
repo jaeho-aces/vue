@@ -80,28 +80,41 @@ const chartOptions = computed(() => ({
   plugins: {
     legend: { 
         display: true,
-        labels: { color: '#ccc', font: { size: 10 } }
+        position: 'top' as const,
+        align: 'end' as const,
+        labels: { color: '#94a3b8', font: { size: 10, weight: 'bold' as const }, boxWidth: 8, usePointStyle: true }
     },
     tooltip: {
       mode: 'index' as const,
       intersect: false,
-      backgroundColor: 'rgba(5, 5, 10, 0.9)',
-      titleColor: '#888',
+      backgroundColor: 'rgba(15, 23, 42, 0.95)',
+      titleColor: '#94a3b8',
       bodyColor: '#fff',
-      borderColor: '#333',
-      borderWidth: 1
+      borderColor: 'rgba(0, 243, 255, 0.3)',
+      borderWidth: 1,
+      padding: 10,
+      cornerRadius: 4,
+      displayColors: false
     }
   },
   scales: {
     x: {
-      display: false,
-      grid: { color: 'rgba(255, 255, 255, 0.05)' },
-      ticks: { color: '#666' }
+      display: true,
+      grid: { color: 'rgba(255, 255, 255, 0.03)', drawTicks: false },
+      ticks: { color: '#64748b', font: { size: 9 }, padding: 8 }
     },
     y: {
-      display: false,
-      grid: { color: 'rgba(255, 255, 255, 0.05)' },
-      ticks: { color: '#666' }
+      display: true,
+      min: 0,
+      max: 10,
+      grid: { color: 'rgba(255, 255, 255, 0.05)', drawTicks: false },
+      ticks: { 
+        color: '#64748b', 
+        font: { size: 9 }, 
+        padding: 8,
+        stepSize: 1,
+        callback: (value: any) => value + 'G'
+      }
     }
   },
   interaction: {

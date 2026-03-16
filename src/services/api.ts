@@ -25,203 +25,39 @@ const apiClient: AxiosInstance = axios.create({
 
 // FastAPI 클라이언트 요청 인터셉터 (인증은 httpOnly 쿠키로 자동 전송)
 fastApiClient.interceptors.request.use(
-  (config) => {
-    // 상세 요청 로깅 (개발 환경)
-    if (import.meta.env.DEV) {
-      const fullURL = `${config.baseURL || ''}${config.url || ''}`
-      console.group(`[FastAPI Request] ${config.method?.toUpperCase()} ${fullURL}`)
-      console.log('Base URL:', config.baseURL)
-      console.log('URL:', config.url)
-      console.log('Full URL:', fullURL)
-      console.log('Params:', config.params)
-      console.log('Headers:', config.headers)
-      console.log('Data:', config.data)
-      console.log('Timeout:', config.timeout)
-      console.groupEnd()
-    }
-    
-    return config
-  },
-  (error: AxiosError) => {
-    console.error('[FastAPI Request Error]', error)
-    return Promise.reject(error)
-  }
+  (config) => config,
+  (error: AxiosError) => Promise.reject(error)
 )
 
 // FastAPI 클라이언트 응답 인터셉터
 fastApiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // 상세 응답 로깅 (개발 환경)
-    if (import.meta.env.DEV) {
-      const fullURL = `${response.config.baseURL || ''}${response.config.url || ''}`
-      console.group(`[FastAPI Response] ${response.config.method?.toUpperCase()} ${fullURL}`)
-      console.log('Status:', response.status, response.statusText)
-      console.log('Data:', response.data)
-      console.groupEnd()
-    }
-    return response
-  },
+  (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    // 상세 에러 로깅
-    const fullURL = error.config ? `${error.config.baseURL || ''}${error.config.url || ''}` : 'Unknown URL'
-    
-    console.group(`[FastAPI Error] ${error.config?.method?.toUpperCase() || 'UNKNOWN'} ${fullURL}`)
-    
-    if (error.response) {
-      const status = error.response.status
-      const data = error.response.data as any
-      
-      console.error('Status:', status, error.response.statusText)
-      console.error('Response Data:', data)
-      
-      if (status === 401) {
-        console.error('❌ 인증 실패: 로그인이 필요합니다.')
-        const authStore = useAuthStore()
-        authStore.logout()
-      } else if (status === 404) {
-        console.error('❌ 요청한 리소스를 찾을 수 없습니다.')
-      } else if (status >= 500) {
-        console.error('❌ 서버 오류가 발생했습니다.')
-      }
-    } else if (error.request) {
-      console.error('❌ 네트워크 오류 또는 서버 응답 없음')
-      console.error('확인 사항:')
-      console.error('1. FastAPI 백엔드 서버가 실행 중인지 확인 (python backend/main.py)')
-      console.error('2. Vite 프록시 설정이 올바른지 확인 (/api 경로)')
+    if (error.response?.status === 401) {
+      const authStore = useAuthStore()
+      authStore.logout()
     }
-    
-    console.groupEnd()
     return Promise.reject(error)
   }
 )
 
 // 공용 클라이언트 요청 인터셉터 (인증은 httpOnly 쿠키로 자동 전송)
 apiClient.interceptors.request.use(
-  (config) => {
-    // 상세 요청 로깅 (개발 환경)
-    if (import.meta.env.DEV) {
-      const fullURL = `${config.baseURL || ''}${config.url || ''}`
-      console.group(`[API Request] ${config.method?.toUpperCase()} ${fullURL}`)
-      console.log('Base URL:', config.baseURL)
-      console.log('URL:', config.url)
-      console.log('Full URL:', fullURL)
-      console.log('Params:', config.params)
-      console.log('Headers:', config.headers)
-      console.log('Data:', config.data)
-      console.log('Timeout:', config.timeout)
-      console.groupEnd()
-    }
-    
-    return config
-  },
-  (error: AxiosError) => {
-    console.error('[API Request Error]', error)
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      config: error.config
-    })
-    return Promise.reject(error)
-  }
+  (config) => config,
+  (error: AxiosError) => Promise.reject(error)
 )
 
 // 응답 인터셉터
 apiClient.interceptors.response.use(
-  (response: AxiosResponse) => {
-    // 상세 응답 로깅 (개발 환경)
-    if (import.meta.env.DEV) {
-      const fullURL = `${response.config.baseURL || ''}${response.config.url || ''}`
-      console.group(`[API Response] ${response.config.method?.toUpperCase()} ${fullURL}`)
-      console.log('Status:', response.status, response.statusText)
-      console.log('Headers:', response.headers)
-      console.log('Data:', response.data)
-      console.log('Config:', {
-        baseURL: response.config.baseURL,
-        url: response.config.url,
-        method: response.config.method,
-        params: response.config.params
-      })
-      console.groupEnd()
-    }
-    
-    return response
-  },
+  (response: AxiosResponse) => response,
   (error: AxiosError) => {
-    // 상세 에러 로깅
-    const fullURL = error.config ? `${error.config.baseURL || ''}${error.config.url || ''}` : 'Unknown URL'
     const requestUrl = error.config?.url ?? ''
     const isAuthMe = /\/api\/auth\/me\/?$/.test(requestUrl)
     const status = error.response?.status
-
-    // /api/auth/me 401 = 세션 확인 중 '로그인 안 됨' 정상 응답 → 콘솔 에러 생략
-    if (isAuthMe && status === 401) {
-      return Promise.reject(error)
+    if (!(isAuthMe && status === 401) && status === 401) {
+      const authStore = useAuthStore()
+      authStore.logout()
     }
-
-    console.group(`[API Error] ${error.config?.method?.toUpperCase() || 'UNKNOWN'} ${fullURL}`)
-    
-    if (error.response) {
-      // 서버 응답이 있는 경우
-      const responseStatus = error.response.status
-      const data = error.response.data as any
-      
-      console.error('Status:', responseStatus, error.response.statusText)
-      console.error('Response Headers:', error.response.headers)
-      console.error('Response Data:', data)
-      console.error('Request Config:', {
-        baseURL: error.config?.baseURL,
-        url: error.config?.url,
-        method: error.config?.method,
-        params: error.config?.params,
-        data: error.config?.data
-      })
-      
-      // 401 Unauthorized - 인증 실패 (auth/me 제외, 위에서 이미 처리)
-      if (responseStatus === 401) {
-        console.error('❌ 인증 실패: 로그인이 필요합니다.')
-        const authStore = useAuthStore()
-        authStore.logout()
-      }
-      
-      // 403 Forbidden - 권한 없음
-      if (responseStatus === 403) {
-        console.error('❌ 접근 권한이 없습니다.')
-      }
-      
-      // 404 Not Found
-      if (responseStatus === 404) {
-        console.error('❌ 요청한 리소스를 찾을 수 없습니다.')
-        console.error('확인 사항:')
-        console.error('1. 백엔드 서버가 실행 중인지 확인')
-        console.error('2. API 엔드포인트 경로가 올바른지 확인')
-        console.error('3. 라우터가 올바르게 등록되었는지 확인')
-      }
-      
-      // 500 Internal Server Error
-      if (responseStatus >= 500) {
-        console.error('❌ 서버 오류가 발생했습니다.')
-      }
-    } else if (error.request) {
-      // 요청은 보냈지만 응답을 받지 못한 경우
-      console.error('❌ 네트워크 오류 또는 서버 응답 없음')
-      console.error('Request:', error.request)
-      console.error('Request URL:', fullURL)
-      console.error('확인 사항:')
-      console.error('1. 백엔드 서버가 실행 중인지 확인 (python main.py)')
-      console.error('2. 서버 URL이 올바른지 확인:', error.config?.baseURL)
-      console.error('3. CORS 설정이 올바른지 확인')
-      console.error('4. 방화벽이나 네트워크 설정 확인')
-      console.error('5. 브라우저 개발자 도구 > Network 탭에서 요청 상태 확인')
-    } else {
-      // 요청 설정 중 오류 발생
-      console.error('❌ 요청 설정 오류')
-      console.error('Message:', error.message)
-      console.error('Code:', error.code)
-      console.error('Config:', error.config)
-    }
-    
-    console.groupEnd()
-    
     return Promise.reject(error)
   }
 )
@@ -287,7 +123,66 @@ export const api = {
   },
 
   // FastAPI 백엔드 전용 API
-  fastapi: fastApiApi
+  fastapi: fastApiApi,
+
+  /** 썸네일 전송 이력 (채널별·날짜별). hourly: 24개, minutes(선택): 1440개(분 단위 성공 0/1). 백엔드 준비 전 mock 반환 */
+  getTransferHistory: async (chId: string, date: string): Promise<{ hourly: number[]; minutes?: number[] }> => {
+    try {
+      const res = await fastApiClient.get<{ hourly: number[]; minutes?: number[] }>('/api/transfer-history', {
+        params: { ch_id: chId, date }
+      })
+      const data = res.data
+      if (data?.hourly?.length === 24) return data
+      return mockTransferHistory()
+    } catch {
+      return mockTransferHistory()
+    }
+  },
+
+  /** 채널 접속 이력 (채널별·날짜별). hourly: 24시간별 접속 건수, minutes(선택): 1440 분 단위 접속 0/1. 백엔드 준비 전 mock 반환 */
+  getConnectionHistory: async (chId: string, date: string): Promise<{ hourly: number[]; minutes?: number[] }> => {
+    try {
+      const res = await fastApiClient.get<{ hourly: number[]; minutes?: number[] }>('/api/connection-history', {
+        params: { ch_id: chId, date }
+      })
+      const data = res.data
+      if (data?.hourly?.length === 24) return data
+      return mockConnectionHistory()
+    } catch {
+      return mockConnectionHistory()
+    }
+  }
+}
+
+function mockTransferHistory(): { hourly: number[]; minutes: number[] } {
+  const hourly = Array.from({ length: 24 }, () => Math.floor(Math.random() * 61))
+  const minutes: number[] = []
+  for (let h = 0; h < 24; h++) {
+    const count = hourly[h]
+    const slot: number[] = Array.from({ length: 60 }, (_, i) => (i < count ? 1 : 0))
+    for (let i = 59; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      const t = slot[i]
+      slot[i] = slot[j]
+      slot[j] = t
+    }
+    minutes.push(...slot)
+  }
+  return { hourly, minutes }
+}
+
+function mockConnectionHistory(): { hourly: number[]; minutes: number[] } {
+  const hourly = Array.from({ length: 24 }, () => Math.floor(Math.random() * 201))
+  const minutes: number[] = []
+  for (let h = 0; h < 24; h++) {
+    const count = hourly[h]
+    const slot: number[] = Array(60).fill(0)
+    for (let i = 0; i < count; i++) {
+      slot[Math.floor(Math.random() * 60)] += 1
+    }
+    minutes.push(...slot)
+  }
+  return { hourly, minutes }
 }
 
 // 기본 export

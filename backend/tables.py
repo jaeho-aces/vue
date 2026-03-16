@@ -330,6 +330,20 @@ TABLES: Dict[str, TableSchema] = {
             TableField("VERSION", "varchar(30)", "버전"),
             TableField("BUILD_DATE", "timestamp", "S/W build date"),
             TableField("START_DATE", "date", "Server start date"),
+            TableField("REG_DATE", "timestamp", "등록 일자"),
+        ]
+    ),
+    "MGMT_PHYSICAL_SERVER": TableSchema(
+        table_name="MGMT_PHYSICAL_SERVER",
+        key="PS_ID",
+        comment="물리 서버 정보",
+        fields=[
+            TableField("PS_ID", "varchar(8)", "물리 서버 ID"),
+            TableField("NAME", "varchar(16)", "서버 이름"),
+            TableField("IP", "inet", "IP 주소"),
+            TableField("LOCATION", "varchar(16)", "위치"),
+            TableField("VM_COUNT", "int4", "VM 수"),
+            TableField("REG_DATE", "timestamp", "등록 일자"),
         ]
     ),
     "MGMT_TRANS_MONITOR_HIS": TableSchema(
@@ -430,6 +444,31 @@ TABLES: Dict[str, TableSchema] = {
             TableField("VERSION", "varchar(30)", "버전 정보"),
             TableField("RELEASE_DATE", "timestamp", "배포 일시"),
             TableField("PATH", "varchar(256)", "실행 파일 저장 경로"),
+        ]
+    ),
+    # 표출그룹 (영상보기 레이아웃 저장/재생)
+    "MGMT_USER_DISPLAY_GROUP": TableSchema(
+        table_name="MGMT_USER_DISPLAY_GROUP",
+        key="GROUP_ID",
+        comment="사용자 표출그룹",
+        fields=[
+            TableField("GROUP_ID", "varchar(64)", "표출그룹 ID (PK)"),
+            TableField("GROUP_NAME", "varchar(64)", "표출그룹 이름"),
+            TableField("USER_ID", "varchar(64)", "사용자 ID"),
+            TableField("LAYOUT", "varchar(64)", "레이아웃 형식 (예: 2x2, 3x3)"),
+        ]
+    ),
+    "MGMT_USER_DISPLAY_GROUP_CAMERA": TableSchema(
+        table_name="MGMT_USER_DISPLAY_GROUP_CAMERA",
+        key="CAMERA_ID",
+        comment="표출그룹별 카메라(슬롯) 정보",
+        fields=[
+            TableField("CAMERA_ID", "varchar(64)", "카메라 행 ID (PK)"),
+            TableField("GROUP_ID", "varchar(64)", "표출그룹 ID"),
+            TableField("USER_ID", "varchar(64)", "사용자 ID"),
+            TableField("OBJECT_ID", "varchar(64)", "채널|카메라 식별 (ch_id|cctv_id)"),
+            TableField("TYPE", "varchar(64)", "스트림 타입 (original-rtsp 등)"),
+            TableField("LAYOUT_INDEX", "smallint", "슬롯 위치 (0부터)"),
         ]
     ),
 }

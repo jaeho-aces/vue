@@ -1,5 +1,6 @@
 <template>
   <Table
+    ref="tableRef"
     v-model="rawData"
     :columns="columns"
     :default-visible-columns="defaultVisibleColumns"
@@ -23,6 +24,7 @@ import { useAlertStore } from '../../../stores/alert'
 import { sha256Hex } from '../../../utils/crypto'
 
 const alertStore = useAlertStore()
+const tableRef = ref<InstanceType<typeof Table> | null>(null)
 
 // 셀 컴포넌트
 const TextCell = defineComponent({
@@ -107,7 +109,6 @@ const loadUserData = async () => {
     
     rawData.value = transformedData
   } catch (error) {
-    console.error('사용자 계정 로드 실패:', error)
     rawData.value = []
   }
 }
@@ -152,9 +153,9 @@ const handleDataUpdate = async (data: Record<string, any>, isNew: boolean) => {
       await api.put('/api/rest-access-page/MGMT_USER', mgmtUserData)
     }
     alertStore.show(isNew ? '신규 생성 완료' : '수정 완료', 'success')
+    tableRef.value?.closeModal?.()
     await loadUserData()
   } catch (error: any) {
-    console.error('데이터 저장 실패:', error)
     const detail = error.response?.data?.detail
     const errorMessage = typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d: any) => d?.msg ?? d).join(', ') : (detail?.message || '데이터 저장 중 오류가 발생했습니다.')
     alertStore.show(`저장 실패: ${errorMessage}`, 'error')
@@ -176,7 +177,6 @@ const handleDataDelete = async (ids: string[]) => {
     // 데이터 다시 로드
     await loadUserData()
   } catch (error: any) {
-    console.error('데이터 삭제 실패:', error)
     const errorMessage = error.response?.data?.detail || '데이터 삭제 중 오류가 발생했습니다.'
     alertStore.show(errorMessage, 'error')
   }

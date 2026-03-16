@@ -52,13 +52,12 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
   async fetchAll(
     forceRefresh = false,
     cacheDuration = 5 * 60 * 1000,
-    logPrefix = '데이터',
+    _logPrefix = '데이터',
     tableName?: string // FastAPI 테이블 이름
   ) {
     // 캐싱 체크
-    if (!forceRefresh && this.state.lastFetched && 
+    if (!forceRefresh && this.state.lastFetched &&
         Date.now() - this.state.lastFetched < cacheDuration) {
-      console.log(`캐시된 ${logPrefix} 사용`)
       return
     }
 
@@ -89,8 +88,6 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
         )
         
         const total = firstResponse.data.total
-        console.log(`전체 ${logPrefix}: ${total}개`)
-        
         allItems = []
         const pageSize = 1000
         const totalPages = Math.ceil(total / pageSize)
@@ -101,7 +98,6 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
             { params: { page, page_size: pageSize } }
           )
           allItems.push(...response.data.items)
-          console.log(`페이지 ${page}/${totalPages} 로드 완료: ${response.data.items.length}개`)
         }
       }
       
@@ -110,25 +106,10 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
         ? allItems.map(this.transformFromAPI) 
         : (allItems as any)
       this.state.lastFetched = Date.now()
-      
-      console.log(`${logPrefix} 로드 완료:`, this.state.items.length, '개')
-      // 첫 번째 아이템의 필드명 확인 (디버깅용)
-      if (this.state.items.length > 0) {
-        console.log(`${logPrefix} 첫 번째 아이템 필드:`, Object.keys(this.state.items[0] as object))
-        console.log(`${logPrefix} 첫 번째 아이템 데이터:`, this.state.items[0])
-      }
     } catch (error: any) {
-      console.error(`${logPrefix} 로드 실패:`, error)
       this.state.error = this.parseBackendError(error)
-      
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         this.state.error = '백엔드 서버에 연결할 수 없습니다.'
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
-        console.error(`서버 URL: ${apiBaseUrl}`)
-        console.error('확인 사항:')
-        console.error('1. FastAPI 백엔드 서버가 실행 중인지 확인하세요 (python backend/main.py)')
-        console.error('2. .env.development 파일의 VITE_API_BASE_URL이 올바른지 확인하세요')
-        console.error('3. CORS 설정이 올바른지 확인하세요')
       }
     } finally {
       this.state.isLoading = false
@@ -137,18 +118,13 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
 
   // 데이터 생성 (공통) - FastAPI 백엔드용
   async create(data: TFrontend, tableName?: string, _tableKey?: string) {
-    if (this.state.isLoading) {
-      console.warn('이미 처리 중인 요청이 있습니다.')
-      return
-    }
+    if (this.state.isLoading) return
 
     try {
       this.state.isLoading = true
       this.state.error = null
       const apiData = this.transformToAPI ? this.transformToAPI(data) : data
-      
-      console.log('생성 요청 데이터:', apiData)
-      
+
       let response: AxiosResponse<TApiResponse>
       if (tableName) {
         // FastAPI REST API 사용
@@ -163,11 +139,8 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
         : (response.data as any)
       this.state.items.push(newItem)
       this.state.lastFetched = Date.now()
-      
-      console.log('데이터 생성 완료:', response.data)
       return response.data
     } catch (error: any) {
-      console.error('데이터 생성 실패:', error)
       this.state.error = this.parseBackendError(error)
       throw error
     } finally {
@@ -177,21 +150,16 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
 
   // 데이터 수정 (공통 - ID 기반) - FastAPI 백엔드용
   async update(id: string, data: Partial<TFrontend>, tableName?: string, tableKey?: string) {
-    if (this.state.isLoading) {
-      console.warn('이미 처리 중인 요청이 있습니다.')
-      return
-    }
+    if (this.state.isLoading) return
 
     try {
       this.state.isLoading = true
       this.state.error = null
       const updateKeyField = tableKey || 'id'
-      const apiData = this.transformToAPI 
+      const apiData = this.transformToAPI
         ? this.transformToAPI({ ...data, [updateKeyField]: id } as TFrontend)
         : { ...data, [updateKeyField]: id }
-      
-      console.log('수정 요청 데이터:', apiData)
-      
+
       let response: AxiosResponse<TApiResponse>
       if (tableName) {
         // FastAPI REST API 사용
@@ -212,11 +180,8 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
           : (response.data as any)
       }
       this.state.lastFetched = Date.now()
-      
-      console.log('데이터 수정 완료:', response.data)
       return response.data
     } catch (error: any) {
-      console.error('데이터 수정 실패:', error)
       this.state.error = this.parseBackendError(error)
       throw error
     } finally {
@@ -227,10 +192,7 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
   // 데이터 삭제 (공통 - ID 기반) - FastAPI 백엔드용
   // id: 단일 키 문자열 또는 복합 키 객체(예: { GRP_GBN: 'C', GRP_CODE: 'test', CODE: 'test' })
   async delete(id: string | Record<string, string>, tableName?: string, tableKey?: string) {
-    if (this.state.isLoading) {
-      console.warn('이미 처리 중인 요청이 있습니다.')
-      return
-    }
+    if (this.state.isLoading) return
 
     try {
       this.state.isLoading = true
@@ -249,10 +211,7 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
         this.state.items = this.state.items.filter(item => (item as any)[deleteKeyField] !== id)
       }
       this.state.lastFetched = Date.now()
-      
-      console.log('데이터 삭제 완료:', id)
     } catch (error: any) {
-      console.error('데이터 삭제 실패:', error)
       this.state.error = this.parseBackendError(error)
       throw error
     } finally {
@@ -262,10 +221,7 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
 
   // 여러 개 삭제 (공통) - FastAPI 백엔드용
   async deleteMany(ids: string[], tableName?: string, tableKey?: string) {
-    if (this.state.isLoading) {
-      console.warn('이미 처리 중인 요청이 있습니다.')
-      return
-    }
+    if (this.state.isLoading) return
 
     try {
       this.state.isLoading = true
@@ -288,10 +244,7 @@ export class ApiStoreHelper<TApiResponse, TFrontend> {
         return !ids.includes(idVal)
       })
       this.state.lastFetched = Date.now()
-      
-      console.log('데이터 삭제 완료:', ids.length, '개')
     } catch (error: any) {
-      console.error('데이터 삭제 실패:', error)
       this.state.error = this.parseBackendError(error)
       throw error
     } finally {

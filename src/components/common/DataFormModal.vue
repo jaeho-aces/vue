@@ -9,7 +9,7 @@
       >
         <div class="modal-container" :class="{ 'modal-container--large': size === 'large', 'modal-container--xlarge': size === 'xlarge' }" @mousedown.stop>
           <div class="modal-header">
-            <h2 class="modal-title">{{ isEditMode ? '수정' : '신규' }} {{ title }}</h2>
+            <h2 class="modal-title">{{ isEditMode ? title + ' 수정' : '신규 ' + title }}</h2>
             <button class="modal-close-button" @click="handleClose">×</button>
           </div>
           
@@ -194,6 +194,14 @@
             >
               {{ isEditMode ? '수정' : '등록' }}
             </button>
+            <button
+              v-if="!isEditMode"
+              type="button"
+              class="modal-button submit-button add-another-button"
+              @click="handleSubmitAndAddAnother"
+            >
+              추가 등록
+            </button>
           </div>
         </div>
       </div>
@@ -246,6 +254,8 @@ interface Props {
   fields: FormField[]
   initialData?: Record<string, any>
   size?: 'default' | 'large' | 'xlarge'
+  /** 추가 등록 후 폼 초기화를 위해 Table에서 증가시키는 트리거 */
+  resetTrigger?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -253,12 +263,14 @@ const props = withDefaults(defineProps<Props>(), {
   title: '',
   fields: () => [],
   initialData: () => ({}),
-  size: 'default'
+  size: 'default',
+  resetTrigger: 0
 })
 
 const emit = defineEmits<{
   close: []
   submit: [data: Record<string, any>]
+  submitAndAddAnother: [data: Record<string, any>]
 }>()
 
 const isEditMode = computed(() => !!props.initialData && Object.keys(props.initialData).length > 0)
@@ -305,12 +317,23 @@ function inputClassFor(field: FormField) {
   return ['form-input', { 'form-input--required': field.required, 'form-input--error': isRequiredEmpty(field) }]
 }
 
+// 사용 여부(yesno) 값 정규화: 1/0, 'y'/'n' 등 → 'Y'/'N' (라디오 버튼 value와 일치)
+function normalizeYesNo(value: any): 'Y' | 'N' {
+  if (value === undefined || value === null || value === '') return 'N'
+  const s = String(value).toUpperCase()
+  if (s === 'Y' || s === '1' || s === 'YES' || s === 'TRUE') return 'Y'
+  return 'N'
+}
+
 // 필드별 초기값 계산 (initialData는 부모가 열기 전에 이미 설정된 상태로 전달됨)
 function getInitialValue(field: FormField): any {
   if (field.type === 'password') return ''
   if (field.type === 'hidden' && props.initialData && props.initialData[field.id] !== undefined) return props.initialData[field.id]
+  if (field.type === 'yesno') {
+    const raw = props.initialData && props.initialData[field.id]
+    return normalizeYesNo(raw)
+  }
   if (props.initialData && props.initialData[field.id] !== undefined) return props.initialData[field.id]
-  if (field.type === 'yesno') return 'N'
   if (field.type === 'toggle') {
     const opts = field.options
     const optionsArray = Array.isArray(opts) ? opts : opts?.(formData.value)
@@ -326,8 +349,8 @@ function getInitialValue(field: FormField): any {
 }
 
 // 모달이 열릴 때만 한 번 실행: 현재 fields 기준으로 formData를 새 객체로 교체. 다른 watch로 덮어쓰지 않아 입력 중 값이 초기화되는 현상 방지
-watch(() => props.isOpen, (newValue) => {
-  if (newValue && Array.isArray(props.fields) && props.fields.length > 0) {
+function initFormData() {
+  if (Array.isArray(props.fields) && props.fields.length > 0) {
     formKey.value += 1
     const next: Record<string, any> = {}
     for (const field of props.fields) {
@@ -335,7 +358,15 @@ watch(() => props.isOpen, (newValue) => {
     }
     formData.value = next
   }
+}
+watch(() => props.isOpen, (newValue) => {
+  if (newValue) initFormData()
 }, { immediate: true, flush: 'sync' })
+
+// 추가 등록 후 부모가 resetTrigger를 올리면 폼만 초기화 (모달은 유지)
+watch(() => props.resetTrigger, () => {
+  if (props.isOpen) initFormData()
+})
 
 // 본부 변경 등으로 옵션이 바뀐 셀렉트: 현재 선택값이 옵션에 없으면 초기화
 watch(formData, () => {
@@ -426,6 +457,64 @@ const handleSubmit = () => {
   }
 
   emit('submit', { ...data })
+}
+
+function handleSubmitAndAddAnother() {
+  const data = formData.value
+  const missingFields = props.fields
+    .filter(field => isRequiredEmpty(field))
+    .map(field => field.label ?? field.id)
+  if (missingFields.length > 0) {
+    const fieldList = missingFields.map((f) => `"${f}"`).join(', ')
+    alertStore.show(
+      `필수 입력 항목을 확인해주세요.\n입력되지 않은 항목: ${fieldList}`,
+      'warning'
+    )
+    return
+  }
+  for (const field of props.fields) {
+    if (field.type === 'hidden') continue
+    const value = data[field.id]
+    const label = field.label ?? field.id
+    if (field.type === 'number') {
+      const num = value === '' || value === undefined || value === null ? NaN : Number(value)
+      if (value !== '' && value !== undefined && value !== null && Number.isNaN(num)) {
+        alertStore.show(`${label}에는 숫자만 입력할 수 있습니다.`, 'warning')
+        return
+      }
+      if (field.min !== undefined && !Number.isNaN(num) && num < field.min) {
+        alertStore.show(`${label}은(는) ${field.min} 이상이어야 합니다.`, 'warning')
+        return
+      }
+      if (field.max !== undefined && !Number.isNaN(num) && num > field.max) {
+        alertStore.show(`${label}은(는) ${field.max} 이하이어야 합니다.`, 'warning')
+        return
+      }
+    }
+    if ((field.type === 'text' || field.type === 'ip' || field.type === 'textarea' || field.type === 'password' || field.type === 'id') && value != null && value !== '') {
+      const str = String(value)
+      if (field.minLength !== undefined && str.length < field.minLength) {
+        alertStore.show(`${label}은(는) ${field.minLength}자 이상이어야 합니다.`, 'warning')
+        return
+      }
+      if (field.maxLength !== undefined && str.length > field.maxLength) {
+        alertStore.show(`${label}은(는) ${field.maxLength}자 이하여야 합니다.`, 'warning')
+        return
+      }
+      if ((field.type === 'text' || field.type === 'ip' || field.type === 'id') && field.pattern) {
+        try {
+          const re = new RegExp(field.pattern)
+          if (!re.test(str)) {
+            alertStore.show(field.patternMessage || `${label} 형식이 올바르지 않습니다.`, 'warning')
+            return
+          }
+        } catch (_) {
+          /* noop */
+        }
+      }
+    }
+  }
+  emit('submitAndAddAnother', { ...data })
 }
 </script>
 

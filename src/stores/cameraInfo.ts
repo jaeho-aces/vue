@@ -117,6 +117,12 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
       }
     },
 
+    // yn 필드 DB 저장 시 소문자로 정규화
+    toYn(v: any): string {
+      if (v === 'Y' || v === 'y' || v === true || v === 'true') return 'y'
+      return 'n'
+    },
+
     // 프론트엔드 데이터를 백엔드 API 형식으로 변환
     transformToAPI(data: any): any {
       return {
@@ -142,13 +148,13 @@ export const useCameraInfoStore = defineStore('cameraInfo', {
         fileurl_wmv: data.fileurl_wmv,
         fileurl_mp4: data.fileurl_mp4,
         fileurl_img: data.fileurl_img,
-        stat: data.stat,
-        alive: data.alive,
-        alive_yn: data.alive_yn,
+        stat: this.toYn(data.stat),
+        alive: this.toYn(data.alive),
+        alive_yn: this.toYn(data.alive_yn),
         update_date: data.update_date,
         last_cctv_time: data.last_cctv_time,
         hls_url: data.hls_url,
-        hls_alive: data.hls_alive,
+        hls_alive: this.toYn(data.hls_alive),
         hls_duration: data.hls_duration,
         hls_emergency: data.hls_emergency,
         ftp_sent_date: data.ftp_sent_date,
